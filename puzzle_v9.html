@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Successor Generation Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h2 {
+            color: #569cd6;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            background: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+        }
+
+        /* Layout Columns */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            min-width: 320px;
+        }
+
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Main Grid Styles */
+        .main-grid-title {
+            color: #9cdcfe;
+            font-weight: bold;
+            margin-bottom: -10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            gap: 6px;
+        }
+
+        .tile {
+            width: 60px;
+            height: 60px;
+            background-color: #333333;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 6px;
+            border: 2px solid transparent;
+        }
+
+        .blank {
+            background-color: #1a1a1a;
+            border: 2px dashed #555;
+            color: transparent;
+        }
+
+        /* Mini Successor Grids */
+        .successors-container {
+            background-color: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 15px;
+            width: 100%;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .successors-title {
+            color: #4ec9b0;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        .successors-list {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            gap: 3px;
+            background: #2d2d2d;
+            padding: 5px;
+            border-radius: 4px;
+            border: 2px solid #3fb950;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .mini-tile {
+            width: 30px;
+            height: 30px;
+            background-color: #444;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+        
+        .mini-blank { background-color: #222; color: transparent; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Code Styles */
+        .code-block {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid #3c3c3c;
+            min-width: 450px;
+        }
+
+        .code-line {
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .active-code {
+            background-color: #264f78;
+            border-left: 4px solid #569cd6;
+        }
+
+        /* Console Output */
+        .console-output {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 100px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #3c3c3c;
+            font-size: 13px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .btn-step {
+            background-color: #0e639c;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-step:hover:not(:disabled) { background-color: #1177bb; }
+        .btn-step:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
+
+        #status {
+            font-family: monospace;
+            font-size: 15px;
+            color: #dcdcaa; 
+            background: #1e1e1e;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 1px solid #3c3c3c;
+            min-width: 300px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Successor Generation Loop</h2>
+
+    <div class="container">
+        <!-- Left Column: Visuals -->
+        <div class="left-col">
+            <div class="main-grid-title">Initial State (Blank at 2,1)</div>
+            <div class="grid" id="main-grid"></div>
+
+            <div class="successors-container">
+                <div class="successors-title">successors = []</div>
+                <div class="successors-list" id="successors-list">
+                    <!-- Mini grids appended here -->
+                </div>
+            </div>
+
+            <div class="console-output" id="console"></div>
+        </div>
+
+        <!-- Right Column: Code & Controls -->
+        <div class="right-col">
+            <div class="code-block" id="code">
+                <div class="code-line" id="line-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">generate_successors</span>(state):</div>
+                <div class="code-line" id="line-2">&nbsp;&nbsp;&nbsp;&nbsp;successors = []</div>
+                <div class="code-line" id="line-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">for</span> move_func <span style="color: #c586c0;">in</span> [move_up, move_down, move_left, move_right]:</div>
+                <div class="code-line" id="line-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = move_func(state)</div>
+                <div class="code-line" id="line-5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> result <span style="color: #c586c0;">is not</span> <span style="color: #569cd6;">None</span>:</div>
+                <div class="code-line" id="line-6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;successors.append(result)</div>
+                <div class="code-line" id="line-7">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> successors</div>
+                <br>
+                <div class="code-line" id="line-8">successors = generate_successors(initial_state)</div>
+                <div class="code-line" id="line-9"><span style="color: #dcdcaa;">print</span>(<span style="color: #ce9178;">f"Number of Successors Generated: {</span><span style="color: #4ec9b0;">len</span>(successors)<span style="color: #ce9178;">}\n"</span>)</div>
+                <div class="code-line" id="line-10">count = 1</div>
+                <div class="code-line" id="line-11"><span style="color: #c586c0;">for</span> state <span style="color: #c586c0;">in</span> successors:</div>
+                <div class="code-line" id="line-12">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #dcdcaa;">print</span>(<span style="color: #ce9178;">f"--- Successor {</span>count<span style="color: #ce9178;">} ---"</span>)</div>
+                <div class="code-line" id="line-13">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">for</span> row <span style="color: #c586c0;">in</span> state:</div>
+                <div class="code-line" id="line-14">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #dcdcaa;">print</span>(row)</div>
+                <div class="code-line" id="line-15">&nbsp;&nbsp;&nbsp;&nbsp;count += 1</div>
+            </div>
+
+            <div class="controls">
+                <div id="status">Click "Next Step" to start generating</div>
+                <button id="next-btn" class="btn-step" onclick="nextStep()">Next Step &rarr;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const initialState = [
+            [1, 2, 3],
+            [4, 8, 5],
+            [6, 0, 7]
+        ];
+
+        // Valid resulting states based on the previous logic
+        const states = {
+            up: [[1, 2, 3], [4, 0, 5], [6, 8, 7]],
+            down: null, // Invalid
+            left: [[1, 2, 3], [4, 8, 5], [0, 6, 7]],
+            right: [[1, 2, 3], [4, 8, 5], [6, 7, 0]]
+        };
+        
+        let generatedSuccessors = [];
+
+        // Render main grid
+        function renderMainGrid() {
+            const gridEl = document.getElementById('main-grid');
+            initialState.forEach(row => {
+                row.forEach(val => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if(val === 0) tile.classList.add('blank');
+                    else tile.textContent = val;
+                    gridEl.appendChild(tile);
+                });
+            });
+        }
+        renderMainGrid();
+
+        // Render a mini grid inside the successors array box
+        function appendMiniGrid(state) {
+            const listEl = document.getElementById('successors-list');
+            const miniGrid = document.createElement('div');
+            miniGrid.className = 'mini-grid';
+            
+            state.forEach(row => {
+                row.forEach(val => {
+                    const tile = document.createElement('div');
+                    tile.className = 'mini-tile';
+                    if(val === 0) tile.classList.add('mini-blank');
+                    else tile.textContent = val;
+                    miniGrid.appendChild(tile);
+                });
+            });
+            listEl.appendChild(miniGrid);
+        }
+
+        // Helpers
+        function highlightLine(id) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active-code'));
+            document.getElementById(id).classList.add('active-code');
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        function updateStatus(text) { document.getElementById('status').innerHTML = text; }
+
+        let stepIndex = 0;
+        
+        // Define the sequence of the simulation
+        const steps = [
+            { line: 'line-8', action: () => updateStatus("Calling generate_successors(initial_state)") },
+            { line: 'line-2', action: () => updateStatus("Initialized empty list: successors = []") },
+            
+            // move_up
+            { line: 'line-3', action: () => updateStatus("Iterating list: Current func = <b>move_up</b>") },
+            { line: 'line-4', action: () => updateStatus("Executing move_up(state) -> Valid Grid Generated") },
+            { line: 'line-5', action: () => updateStatus("Checking: result is not None (True)") },
+            { line: 'line-6', action: () => {
+                generatedSuccessors.push(states.up);
+                appendMiniGrid(states.up);
+                updateStatus("Appended up-move result to successors list.");
+            }},
+            
+            // move_down
+            { line: 'line-3', action: () => updateStatus("Iterating list: Current func = <b>move_down</b>") },
+            { line: 'line-4', action: () => updateStatus("Executing move_down(state) -> Returns <b>None</b> (Invalid)") },
+            { line: 'line-5', action: () => updateStatus("Checking: result is not None (False! Skip append.)") },
+            
+            // move_left
+            { line: 'line-3', action: () => updateStatus("Iterating list: Current func = <b>move_left</b>") },
+            { line: 'line-4', action: () => updateStatus("Executing move_left(state) -> Valid Grid Generated") },
+            { line: 'line-5', action: () => updateStatus("Checking: result is not None (True)") },
+            { line: 'line-6', action: () => {
+                generatedSuccessors.push(states.left);
+                appendMiniGrid(states.left);
+                updateStatus("Appended left-move result to successors list.");
+            }},
+            
+            // move_right
+            { line: 'line-3', action: () => updateStatus("Iterating list: Current func = <b>move_right</b>") },
+            { line: 'line-4', action: () => updateStatus("Executing move_right(state) -> Valid Grid Generated") },
+            { line: 'line-5', action: () => updateStatus("Checking: result is not None (True)") },
+            { line: 'line-6', action: () => {
+                generatedSuccessors.push(states.right);
+                appendMiniGrid(states.right);
+                updateStatus("Appended right-move result to successors list.");
+            }},
+
+            // Return
+            { line: 'line-7', action: () => updateStatus("Loop complete. Returning populated successors list.") },
+            
+            // Printing
+            { line: 'line-9', action: () => {
+                const con = document.getElementById('console');
+                con.style.display = 'block';
+                con.innerHTML += `Number of Successors Generated: 3\n\n`;
+                updateStatus("Printing total generated count.");
+            }},
+            { line: 'line-10', action: () => updateStatus("Initialize count = 1") },
+            { line: 'line-11', action: () => updateStatus("Iterating over returned successors list to print...") },
+            { line: 'line-14', action: () => {
+                // Simulate the entire nested loop print instantly for visual flow
+                const con = document.getElementById('console');
+                let count = 1;
+                generatedSuccessors.forEach(state => {
+                    con.innerHTML += `--- Successor ${count} ---\n`;
+                    state.forEach(row => con.innerHTML += `[${row.join(', ')}]\n`);
+                    count++;
+                });
+                updateStatus("Printed all successors to console!");
+                
+                document.getElementById('next-btn').textContent = "Execution Complete";
+                document.getElementById('next-btn').disabled = true;
+            }}
+        ];
+
+        function nextStep() {
+            if (stepIndex >= steps.length) return;
+            const step = steps[stepIndex];
+            highlightLine(step.line);
+            step.action();
+            stepIndex++;
+        }
+    </script>
+</body>
+</html>

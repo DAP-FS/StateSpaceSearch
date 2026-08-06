@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BFS Algorithm Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            margin: 0;
+        }
+
+        h2 {
+            color: #569cd6;
+            margin-bottom: 15px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            background: #252526;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1300px;
+            width: 100%;
+        }
+
+        /* Layout Columns */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            min-width: 280px;
+        }
+
+        .mid-col {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 450px;
+            flex: 1;
+        }
+
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 250px;
+        }
+
+        /* Grid Styles */
+        .grid-title {
+            color: #9cdcfe;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: -5px;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            gap: 5px;
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #3c3c3c;
+        }
+
+        .tile {
+            width: 50px;
+            height: 50px;
+            background-color: #333333;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+
+        .blank {
+            background-color: #1a1a1a;
+            border: 2px dashed #555;
+            color: transparent;
+            box-sizing: border-box;
+        }
+
+        .goal-grid .tile { background-color: #264f78; }
+        .goal-grid .blank { border-color: #569cd6; }
+
+        /* Code Styles */
+        .code-block {
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            border: 1px solid #3c3c3c;
+            overflow-x: auto;
+        }
+
+        .code-line {
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border-left: 4px solid transparent;
+            white-space: pre;
+        }
+
+        .active-code {
+            background-color: #264f78;
+            border-left: 4px solid #569cd6;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            background-color: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-family: monospace;
+            font-size: 14px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #444;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        
+        .stat-label { color: #dcdcaa; }
+        .stat-value { color: #4ec9b0; font-weight: bold; }
+
+        /* Console Output */
+        .console-output {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #3c3c3c;
+            font-size: 12px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-step {
+            background-color: #0e639c;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+
+        .btn-step:hover:not(:disabled) { background-color: #1177bb; }
+        .btn-step:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
+
+        #status {
+            font-family: monospace;
+            font-size: 13px;
+            color: #ce9178; 
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #3c3c3c;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Breadth-First Search (BFS) Visualizer</h2>
+
+    <div class="container">
+        <!-- Left Column: Visuals -->
+        <div class="left-col">
+            <div class="grid-title">Current State</div>
+            <div class="grid" id="current-grid"></div>
+
+            <div class="grid-title" style="margin-top: 10px;">Goal State</div>
+            <div class="grid goal-grid" id="goal-grid"></div>
+
+            <div class="console-output" id="console"></div>
+        </div>
+
+        <!-- Middle Column: Code -->
+        <div class="mid-col">
+            <div class="code-block" id="code">
+<div class="code-line" id="line-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">solve_bfs</span>(start, goal):</div>
+<div class="code-line" id="line-2">    queue = deque([(start, [start])])</div>
+<div class="code-line" id="line-3">    visited = {state_to_tuple(start)}</div>
+<div class="code-line" id="line-4">    nodes_explored = 0</div>
+<div class="code-line" id="line-5">    </div>
+<div class="code-line" id="line-6">    <span style="color: #c586c0;">while</span> queue:</div>
+<div class="code-line" id="line-7">        current_state, path = queue.popleft()</div>
+<div class="code-line" id="line-8">        nodes_explored += 1</div>
+<div class="code-line" id="line-9">        </div>
+<div class="code-line" id="line-10">        <span style="color: #c586c0;">if</span> current_state == goal:</div>
+<div class="code-line" id="line-11">            <span style="color: #c586c0;">return</span> path, nodes_explored</div>
+<div class="code-line" id="line-12">            </div>
+<div class="code-line" id="line-13">        <span style="color: #c586c0;">for</span> successor <span style="color: #c586c0;">in</span> generate_successors(current_state):</div>
+<div class="code-line" id="line-14">            succ_tuple = state_to_tuple(successor)</div>
+<div class="code-line" id="line-15">            <span style="color: #c586c0;">if</span> succ_tuple <span style="color: #c586c0;">not in</span> visited:</div>
+<div class="code-line" id="line-16">                visited.add(succ_tuple)</div>
+<div class="code-line" id="line-17">                queue.append((successor, path + [successor]))</div>
+<div class="code-line" id="line-18">                </div>
+<div class="code-line" id="line-19">    <span style="color: #c586c0;">return</span> <span style="color: #569cd6;">None</span>, nodes_explored</div>
+            </div>
+        </div>
+
+        <!-- Right Column: Stats & Controls -->
+        <div class="right-col">
+            <div class="stats-panel">
+                <div class="stat-row">
+                    <span class="stat-label">Queue Size:</span>
+                    <span class="stat-value" id="stat-queue">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Visited Set Size:</span>
+                    <span class="stat-value" id="stat-visited">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Nodes Explored:</span>
+                    <span class="stat-value" id="stat-explored">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Current Path Len:</span>
+                    <span class="stat-value" id="stat-path">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div id="status">Click to initialize BFS search...</div>
+                <button id="next-btn" class="btn-step" onclick="nextStep()">Next Step &rarr;</button>
+                <button id="skip-btn" class="btn-step" onclick="skipToEnd()" style="background-color: #6c757d;">Fast Forward</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Start State (2 moves away from goal)
+        const startState = [ [1, 2, 3], [4, 5, 0], [7, 8, 6] ];
+        const goalState = [ [1, 2, 3], [4, 5, 6], [7, 8, 0] ];
+
+        // Define successor states hardcoded for this quick 2-move simulation
+        const s1_up = [ [1, 2, 0], [4, 5, 3], [7, 8, 6] ];
+        const s1_dn = [ [1, 2, 3], [4, 5, 6], [7, 8, 0] ]; // Goal!
+        const s1_lt = [ [1, 2, 3], [4, 0, 5], [7, 8, 6] ];
+
+        function drawGrid(state, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            state.forEach(row => {
+                row.forEach(val => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if (val === 0) tile.classList.add('blank');
+                    else tile.textContent = val;
+                    container.appendChild(tile);
+                });
+            });
+        }
+
+        drawGrid(startState, 'current-grid');
+        drawGrid(goalState, 'goal-grid');
+
+        // UI Updaters
+        function h(id) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active-code'));
+            document.getElementById(id).classList.add('active-code');
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        function msg(text) { document.getElementById('status').innerHTML = text; }
+        function setStat(id, val) { document.getElementById(id).textContent = val; }
+
+        let qSize = 0;
+        let vSize = 0;
+        let explored = 0;
+        let pathLen = 0;
+        let stepIndex = 0;
+
+        const sequence = [
+            // Initialization
+            { l: 'line-1', a: () => msg("Calling solve_bfs(start, goal)") },
+            { l: 'line-2', a: () => { qSize = 1; setStat('stat-queue', qSize); msg("Initialized queue with (start_state, path)"); } },
+            { l: 'line-3', a: () => { vSize = 1; setStat('stat-visited', vSize); msg("Added start_state to visited set"); } },
+            { l: 'line-4', a: () => msg("Initialized nodes_explored counter to 0") },
+            
+            // Loop 1: Expanding Start State
+            { l: 'line-6', a: () => msg("while queue: Queue is not empty (size 1)") },
+            { l: 'line-7', a: () => { 
+                qSize = 0; setStat('stat-queue', qSize); 
+                pathLen = 1; setStat('stat-path', pathLen);
+                drawGrid(startState, 'current-grid');
+                msg("Popped current_state from queue"); 
+            }},
+            { l: 'line-8', a: () => { explored++; setStat('stat-explored', explored); msg("Incremented nodes_explored"); } },
+            { l: 'line-10', a: () => msg("Check: Is current_state == goal? (False)") },
+            
+            // Successor 1 (Up)
+            { l: 'line-13', a: () => msg("Generating Successor 1 (Move Up)") },
+            { l: 'line-14', a: () => { drawGrid(s1_up, 'current-grid'); msg("Convert successor to tuple"); } },
+            { l: 'line-15', a: () => msg("Check if successor in visited set (False)") },
+            { l: 'line-16', a: () => { vSize++; setStat('stat-visited', vSize); msg("Added successor to visited set"); } },
+            { l: 'line-17', a: () => { qSize++; setStat('stat-queue', qSize); msg("Appended to queue with path of length 2"); } },
+
+            // Successor 2 (Down - This is the Goal)
+            { l: 'line-13', a: () => { drawGrid(startState, 'current-grid'); msg("Generating Successor 2 (Move Down)"); } },
+            { l: 'line-14', a: () => { drawGrid(s1_dn, 'current-grid'); msg("Convert successor to tuple"); } },
+            { l: 'line-15', a: () => msg("Check if successor in visited set (False)") },
+            { l: 'line-16', a: () => { vSize++; setStat('stat-visited', vSize); msg("Added successor to visited set"); } },
+            { l: 'line-17', a: () => { qSize++; setStat('stat-queue', qSize); msg("Appended to queue with path of length 2"); } },
+
+            // Successor 3 (Left)
+            { l: 'line-13', a: () => { drawGrid(startState, 'current-grid'); msg("Generating Successor 3 (Move Left)"); } },
+            { l: 'line-14', a: () => { drawGrid(s1_lt, 'current-grid'); msg("Convert successor to tuple"); } },
+            { l: 'line-15', a: () => msg("Check if successor in visited set (False)") },
+            { l: 'line-16', a: () => { vSize++; setStat('stat-visited', vSize); msg("Added successor to visited set"); } },
+            { l: 'line-17', a: () => { qSize++; setStat('stat-queue', qSize); msg("Appended to queue with path of length 2"); } },
+
+            // Loop 2: Expanding next state (Up successor)
+            { l: 'line-6', a: () => msg("while queue: Queue is not empty (size 3)") },
+            { l: 'line-7', a: () => { 
+                qSize--; setStat('stat-queue', qSize); 
+                pathLen = 2; setStat('stat-path', pathLen);
+                drawGrid(s1_up, 'current-grid');
+                msg("Popped current_state from queue (The 'Up' Successor)"); 
+            }},
+            { l: 'line-8', a: () => { explored++; setStat('stat-explored', explored); msg("Incremented nodes_explored"); } },
+            { l: 'line-10', a: () => msg("Check: Is current_state == goal? (False)") },
+            { l: 'line-13', a: () => msg("Skipping successor generation for brevity. Appending 2 children...") },
+            { l: 'line-17', a: () => { qSize+=2; vSize+=2; setStat('stat-queue', qSize); setStat('stat-visited', vSize); msg("Added children to queue."); } },
+
+            // Loop 3: Expanding next state (Down successor -> Goal)
+            { l: 'line-6', a: () => msg("while queue: Queue is not empty (size 4)") },
+            { l: 'line-7', a: () => { 
+                qSize--; setStat('stat-queue', qSize); 
+                pathLen = 2; setStat('stat-path', pathLen);
+                drawGrid(s1_dn, 'current-grid');
+                msg("Popped current_state from queue (The 'Down' Successor)"); 
+            }},
+            { l: 'line-8', a: () => { explored++; setStat('stat-explored', explored); msg("Incremented nodes_explored"); } },
+            { l: 'line-10', a: () => msg("Check: Is current_state == goal? (True!)") },
+            { l: 'line-11', a: () => {
+                msg("GOAL REACHED! Returning path and nodes_explored.");
+                const c = document.getElementById('console');
+                c.style.display = 'block';
+                c.innerHTML = `====================================\nBFS SEARCH COMPLETED!\nTotal Nodes Explored: ${explored}\nOptimal Path Length: 1 moves\n====================================\n\n--- Step 0 ---\n[1, 2, 3]\n[4, 5, 0]\n[7, 8, 6]\n\n--- Step 1 ---\n[1, 2, 3]\n[4, 5, 6]\n[7, 8, 0]`;
+                document.getElementById('next-btn').disabled = true;
+                document.getElementById('skip-btn').disabled = true;
+            }}
+        ];
+
+        function nextStep() {
+            if (stepIndex >= sequence.length) return;
+            const s = sequence[stepIndex];
+            h(s.l);
+            s.a();
+            stepIndex++;
+        }
+
+        function skipToEnd() {
+            while (stepIndex < sequence.length) {
+                sequence[stepIndex].a();
+                stepIndex++;
+            }
+            h('line-11');
+        }
+    </script>
+</body>
+</html>

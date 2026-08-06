@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>State Space Search Visualizations</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family: "Segoe UI", Arial, sans-serif;
+    background:#f8f9fb;
+    color:#222;
+}
+
+header{
+    padding:60px 20px 30px;
+    text-align:center;
+}
+
+header h1{
+    font-size:42px;
+    font-weight:700;
+    color:#1e3a8a;
+    margin-bottom:10px;
+}
+
+header p{
+    color:#666;
+    font-size:18px;
+}
+
+.container{
+    max-width:900px;
+    margin:40px auto 80px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:24px;
+    padding:0 20px;
+}
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:28px;
+    text-decoration:none;
+    color:#222;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    transition:.25s;
+    border:1px solid #eee;
+}
+
+.card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 12px 30px rgba(0,0,0,.12);
+}
+
+.card h2{
+    font-size:22px;
+    color:#1e3a8a;
+    margin-bottom:12px;
+}
+
+.card p{
+    color:#555;
+    line-height:1.6;
+}
+
+footer{
+    text-align:center;
+    color:#888;
+    padding:30px;
+    border-top:1px solid #e5e5e5;
+    font-size:14px;
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <h1>State Space Search</h1>
+    <p>Interactive visualizations for Artificial Intelligence algorithms.</p>
+</header>
+
+<div class="container">
+
+<a class="card" href="puzzle_v5.html">
+    <h2>01. State Representation</h2>
+    <p>Understand how the 8-Puzzle state is represented and initialized.</p>
+</a>
+
+<a class="card" href="puzzle_v6.html">
+    <h2>02. Successor Generation</h2>
+    <p>Visualize all valid successor states generated from the current state.</p>
+</a>
+
+<a class="card" href="puzzle_v3.html">
+    <h2>03. Breadth-First Search</h2>
+    <p>Explore how BFS expands nodes level by level.</p>
+</a>
+
+<a class="card" href="puzzle_v4.html">
+    <h2>04. Goal Test</h2>
+    <p>Observe how the algorithm checks whether the goal state is reached.</p>
+</a>
+
+<a class="card" href="puzzle_v7.html">
+    <h2>05. Solution Reconstruction</h2>
+    <p>Follow the final solution path from the initial state to the goal.</p>
+</a>
+
+</div>
+
+<footer>
+    Developed by <strong>Ashwini Kumar Mathur</strong><br>
+    School of Computer Science and Engineering • RV University
+</footer>
+
+</body>
+</html>

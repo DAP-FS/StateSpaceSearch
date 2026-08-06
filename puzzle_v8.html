@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Move Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h2 {
+            color: #569cd6;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            background: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Grid Styles */
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            position: sticky;
+            top: 40px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            gap: 8px;
+        }
+
+        .tile {
+            width: 80px;
+            height: 80px;
+            background-color: #333333;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .blank {
+            background-color: #1a1a1a;
+            border: 2px dashed #555;
+            color: transparent;
+        }
+
+        .swap-highlight {
+            background-color: #2ea043;
+            border-color: #3fb950;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(63, 185, 80, 0.4);
+        }
+
+        .error-highlight {
+            background-color: #a12626;
+            border-color: #f44336;
+        }
+
+        /* Code Styles */
+        .code-block {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            border: 1px solid #3c3c3c;
+            min-width: 380px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .code-line {
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .active-code {
+            background-color: #264f78;
+            border-left: 4px solid #569cd6;
+        }
+        
+        .eval-code {
+            background-color: #4d3a14;
+            border-left: 4px solid #d7ba7d;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .move-selectors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            background-color: #0e639c;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #1177bb;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-step {
+            background-color: #2ea043;
+            font-size: 16px;
+            padding: 12px 24px;
+        }
+
+        .btn-step:hover:not(:disabled) {
+            background-color: #3fb950;
+        }
+
+        #status {
+            font-family: monospace;
+            font-size: 16px;
+            color: #9cdcfe; 
+            background: #1e1e1e;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 1px solid #3c3c3c;
+            min-width: 300px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Complete Move Visualizer</h2>
+
+    <div class="container">
+        <!-- 3x3 Grid -->
+        <div class="grid-container">
+            <div class="grid" id="puzzle-grid"></div>
+            
+            <div class="controls">
+                <div class="move-selectors">
+                    <button onclick="startSimulation('up')">Simulate move_up()</button>
+                    <button onclick="startSimulation('down')">Simulate move_down()</button>
+                    <button onclick="startSimulation('left')">Simulate move_left()</button>
+                    <button onclick="startSimulation('right')">Simulate move_right()</button>
+                </div>
+                <div id="status">Select a move to simulate from position (2,1)</div>
+                <button id="next-btn" class="btn-step" onclick="nextStep()" disabled>Next Step &rarr;</button>
+            </div>
+        </div>
+
+        <!-- Python Code Block -->
+        <div class="code-block" id="code">
+            <!-- MOVE UP -->
+            <div class="code-line" id="line-up-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">move_up</span>(state):</div>
+            <div class="code-line" id="line-up-2">&nbsp;&nbsp;&nbsp;&nbsp;row, col = find_blank(state)</div>
+            <div class="code-line" id="line-up-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> row == 0:</div>
+            <div class="code-line" id="line-up-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> <span style="color: #569cd6;">None</span></div>
+            <div class="code-line" id="line-up-5">&nbsp;&nbsp;&nbsp;&nbsp;new_state = [r.copy() <span style="color: #c586c0;">for</span> r <span style="color: #c586c0;">in</span> state]</div>
+            <div class="code-line" id="line-up-6">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col] = new_state[row-1][col]</div>
+            <div class="code-line" id="line-up-7">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row-1][col] = 0</div>
+            <div class="code-line" id="line-up-8">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> new_state</div>
+            <br>
+            <!-- MOVE DOWN -->
+            <div class="code-line" id="line-dn-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">move_down</span>(state):</div>
+            <div class="code-line" id="line-dn-2">&nbsp;&nbsp;&nbsp;&nbsp;row, col = find_blank(state)</div>
+            <div class="code-line" id="line-dn-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> row == 2:</div>
+            <div class="code-line" id="line-dn-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> <span style="color: #569cd6;">None</span></div>
+            <div class="code-line" id="line-dn-5">&nbsp;&nbsp;&nbsp;&nbsp;new_state = [r.copy() <span style="color: #c586c0;">for</span> r <span style="color: #c586c0;">in</span> state]</div>
+            <div class="code-line" id="line-dn-6">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col] = new_state[row+1][col]</div>
+            <div class="code-line" id="line-dn-7">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row+1][col] = 0</div>
+            <div class="code-line" id="line-dn-8">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> new_state</div>
+            <br>
+            <!-- MOVE LEFT -->
+            <div class="code-line" id="line-lt-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">move_left</span>(state):</div>
+            <div class="code-line" id="line-lt-2">&nbsp;&nbsp;&nbsp;&nbsp;row, col = find_blank(state)</div>
+            <div class="code-line" id="line-lt-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> col == 0:</div>
+            <div class="code-line" id="line-lt-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> <span style="color: #569cd6;">None</span></div>
+            <div class="code-line" id="line-lt-5">&nbsp;&nbsp;&nbsp;&nbsp;new_state = [r.copy() <span style="color: #c586c0;">for</span> r <span style="color: #c586c0;">in</span> state]</div>
+            <div class="code-line" id="line-lt-6">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col] = new_state[row][col-1]</div>
+            <div class="code-line" id="line-lt-7">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col-1] = 0</div>
+            <div class="code-line" id="line-lt-8">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> new_state</div>
+            <br>
+            <!-- MOVE RIGHT -->
+            <div class="code-line" id="line-rt-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">move_right</span>(state):</div>
+            <div class="code-line" id="line-rt-2">&nbsp;&nbsp;&nbsp;&nbsp;row, col = find_blank(state)</div>
+            <div class="code-line" id="line-rt-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> col == 2:</div>
+            <div class="code-line" id="line-rt-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> <span style="color: #569cd6;">None</span></div>
+            <div class="code-line" id="line-rt-5">&nbsp;&nbsp;&nbsp;&nbsp;new_state = [r.copy() <span style="color: #c586c0;">for</span> r <span style="color: #c586c0;">in</span> state]</div>
+            <div class="code-line" id="line-rt-6">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col] = new_state[row][col+1]</div>
+            <div class="code-line" id="line-rt-7">&nbsp;&nbsp;&nbsp;&nbsp;new_state[row][col+1] = 0</div>
+            <div class="code-line" id="line-rt-8">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> new_state</div>
+        </div>
+    </div>
+
+    <script>
+        // Keep consistent state
+        let currentState = [
+            [1, 2, 3],
+            [4, 8, 5],
+            [6, 0, 7]
+        ];
+        let blankR = 2, blankC = 1;
+        
+        let executionSteps = [];
+        let stepIndex = 0;
+
+        function renderGrid(state) {
+            const gridElement = document.getElementById('puzzle-grid');
+            gridElement.innerHTML = ''; 
+            state.forEach((rowData, r) => {
+                rowData.forEach((val, c) => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if (val === 0) {
+                        tile.classList.add('blank');
+                    } else {
+                        tile.textContent = val;
+                    }
+                    tile.id = `tile-${r}-${c}`;
+                    gridElement.appendChild(tile);
+                });
+            });
+        }
+
+        renderGrid(currentState);
+
+        function updateStatus(text) {
+            document.getElementById('status').innerHTML = text;
+        }
+
+        function highlightLine(lineId, type = 'active-code') {
+            document.querySelectorAll('.code-line').forEach(el => {
+                el.classList.remove('active-code', 'eval-code');
+            });
+            if(lineId) {
+                const line = document.getElementById(lineId);
+                line.classList.add(type);
+                // Scroll the code block to the highlighted line
+                line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function buildSteps(direction) {
+            let prefix, conditionVal, offsetR, offsetC, conditionString;
+            
+            // Map parameters based on direction
+            if (direction === 'up') {
+                prefix = 'up'; conditionVal = 0; offsetR = -1; offsetC = 0; conditionString = 'row == 0';
+            } else if (direction === 'down') {
+                prefix = 'dn'; conditionVal = 2; offsetR = 1; offsetC = 0; conditionString = 'row == 2';
+            } else if (direction === 'left') {
+                prefix = 'lt'; conditionVal = 0; offsetR = 0; offsetC = -1; conditionString = 'col == 0';
+            } else if (direction === 'right') {
+                prefix = 'rt'; conditionVal = 2; offsetR = 0; offsetC = 1; conditionString = 'col == 2';
+            }
+
+            // Determine whether we check row or col for validation
+            let axisValToCheck = (direction === 'left' || direction === 'right') ? blankC : blankR;
+
+            let steps = [];
+            
+            steps.push({
+                line: `line-${prefix}-2`,
+                action: () => updateStatus(`Found blank at row=${blankR}, col=${blankC}`)
+            });
+
+            steps.push({
+                line: `line-${prefix}-3`,
+                type: 'eval-code',
+                action: () => {
+                    const result = axisValToCheck === conditionVal;
+                    updateStatus(`Evaluating: <b>${conditionString}</b> &rarr; ${axisValToCheck} == ${conditionVal} &rarr; <span style="color:${result?'#f44336':'#3fb950'}">${result}</span>`);
+                }
+            });
+
+            if (axisValToCheck === conditionVal) {
+                steps.push({
+                    line: `line-${prefix}-4`,
+                    action: () => {
+                        updateStatus('Invalid move! Returning None.');
+                        document.getElementById(`tile-${blankR}-${blankC}`).classList.add('error-highlight');
+                        document.getElementById('next-btn').disabled = true;
+                    }
+                });
+            } else {
+                steps.push({
+                    line: `line-${prefix}-5`,
+                    action: () => updateStatus('Created deep copy of state: new_state')
+                });
+                steps.push({
+                    line: `line-${prefix}-6`,
+                    action: () => {
+                        updateStatus(`Overwriting blank with tile moving ${direction}...`);
+                        let swapTile = currentState[blankR + offsetR][blankC + offsetC];
+                        let currentTileElement = document.getElementById(`tile-${blankR}-${blankC}`);
+                        currentTileElement.classList.remove('blank');
+                        currentTileElement.textContent = swapTile;
+                        currentTileElement.classList.add('swap-highlight');
+                    }
+                });
+                steps.push({
+                    line: `line-${prefix}-7`,
+                    action: () => {
+                        updateStatus(`Setting old tile position to 0 (blank)...`);
+                        let oldTileElement = document.getElementById(`tile-${blankR + offsetR}-${blankC + offsetC}`);
+                        oldTileElement.textContent = '';
+                        oldTileElement.classList.add('blank', 'swap-highlight');
+                    }
+                });
+                steps.push({
+                    line: `line-${prefix}-8`,
+                    action: () => {
+                        updateStatus('Returned new_state successfully!');
+                        document.getElementById('next-btn').textContent = "Execution Complete";
+                        document.getElementById('next-btn').disabled = true;
+                    }
+                });
+            }
+            return steps;
+        }
+
+        function startSimulation(direction) {
+            // Reset grid and UI back to initial state
+            currentState = [[1, 2, 3], [4, 8, 5], [6, 0, 7]];
+            renderGrid(currentState);
+            stepIndex = 0;
+            
+            // Build logic sequence
+            executionSteps = buildSteps(direction);
+            
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.disabled = false;
+            nextBtn.textContent = "Next Step \u2192";
+            
+            updateStatus(`Simulation initialized for ${direction}. Click Next Step.`);
+            
+            // Highlight the function definition line dynamically
+            let prefix = direction === 'up' ? 'up' : direction === 'down' ? 'dn' : direction === 'left' ? 'lt' : 'rt';
+            highlightLine(`line-${prefix}-1`);
+        }
+
+        function nextStep() {
+            if (stepIndex >= executionSteps.length) return;
+            
+            const step = executionSteps[stepIndex];
+            highlightLine(step.line, step.type || 'active-code');
+            step.action();
+            
+            stepIndex++;
+        }
+    </script>
+</body>
+</html>

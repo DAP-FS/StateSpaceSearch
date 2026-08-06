@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Valid Moves Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h2 {
+            color: #569cd6;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            background: #252526;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Grid Styles */
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            gap: 8px;
+        }
+
+        .tile {
+            width: 80px;
+            height: 80px;
+            background-color: #333333;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .blank {
+            background-color: #1a1a1a;
+            border: 2px dashed #555;
+            color: transparent;
+        }
+        
+        .blank::after {
+            content: '0';
+            color: #555;
+            font-size: 20px;
+        }
+
+        /* Valid Move Highlight */
+        .valid-tile {
+            background-color: #2ea043;
+            border: 2px solid #3fb950;
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(63, 185, 80, 0.4);
+        }
+
+        .valid-label {
+            position: absolute;
+            bottom: 4px;
+            font-size: 12px;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Code Styles */
+        .code-block {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            line-height: 1.6;
+            border: 1px solid #3c3c3c;
+            min-width: 320px;
+        }
+
+        .code-line {
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .active-code {
+            background-color: #264f78;
+            border-left: 4px solid #569cd6;
+        }
+        
+        .eval-code {
+            background-color: #4d3a14;
+            border-left: 4px solid #d7ba7d;
+        }
+
+        /* Variables / List display */
+        .variables-box {
+            background-color: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 15px;
+            width: 100%;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 18px;
+        }
+
+        .moves-array {
+            color: #ce9178; /* string color */
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #0e639c;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #1177bb;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #status {
+            font-family: monospace;
+            font-size: 16px;
+            color: #9cdcfe; 
+            background: #1e1e1e;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 1px solid #3c3c3c;
+            min-width: 300px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Valid Moves Visualizer</h2>
+
+    <div class="container">
+        <!-- 3x3 Grid & Variables-->
+        <div class="grid-container">
+            <div class="grid" id="puzzle-grid"></div>
+            
+            <div class="variables-box">
+                <span style="color: #9cdcfe;">moves</span> = [<span class="moves-array" id="moves-display"></span>]
+            </div>
+        </div>
+
+        <!-- Python Code Block -->
+        <div class="code-block" id="code">
+            <div class="code-line" id="line-1"><span style="color: #569cd6;">def</span> <span style="color: #dcdcaa;">valid_moves</span>(row, col):</div>
+            <div class="code-line" id="line-2">&nbsp;&nbsp;&nbsp;&nbsp;moves = []</div>
+            <div class="code-line" id="line-3">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> row > 0:</div>
+            <div class="code-line" id="line-4">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;moves.append(<span style="color: #ce9178;">"UP"</span>)</div>
+            <div class="code-line" id="line-5">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> row < 2:</div>
+            <div class="code-line" id="line-6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;moves.append(<span style="color: #ce9178;">"DOWN"</span>)</div>
+            <div class="code-line" id="line-7">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> col > 0:</div>
+            <div class="code-line" id="line-8">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;moves.append(<span style="color: #ce9178;">"LEFT"</span>)</div>
+            <div class="code-line" id="line-9">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">if</span> col < 2:</div>
+            <div class="code-line" id="line-10">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;moves.append(<span style="color: #ce9178;">"RIGHT"</span>)</div>
+            <div class="code-line" id="line-11">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #c586c0;">return</span> moves</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div id="status">Current Blank Position: row=2, col=1</div>
+        <button id="next-btn" onclick="nextStep()">Next Step &rarr;</button>
+    </div>
+
+    <script>
+        // Set the state matching the end of the previous code snippet
+        const initialState = [
+            [1, 2, 3],
+            [4, 8, 5],
+            [6, 0, 7]
+        ];
+        
+        // Target coordinates from previous run
+        const targetRow = 2;
+        const targetCol = 1;
+        
+        let currentMoves = [];
+        let stepIndex = 0;
+
+        // Render Grid
+        const gridElement = document.getElementById('puzzle-grid');
+        initialState.forEach((rowData, r) => {
+            rowData.forEach((val, c) => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                if (r === targetRow && c === targetCol) {
+                    tile.classList.add('blank');
+                } else {
+                    tile.textContent = val;
+                }
+                tile.id = `tile-${r}-${c}`;
+                gridElement.appendChild(tile);
+            });
+        });
+
+        function updateStatus(text) {
+            document.getElementById('status').innerHTML = text;
+        }
+
+        function highlightLine(lineId, type = 'active-code') {
+            document.querySelectorAll('.code-line').forEach(el => {
+                el.classList.remove('active-code', 'eval-code');
+            });
+            document.getElementById(lineId).classList.add(type);
+        }
+        
+        function updateMovesArray() {
+            const display = currentMoves.map(m => `"${m}"`).join(', ');
+            document.getElementById('moves-display').textContent = display;
+        }
+
+        function highlightValidTile(r, c, moveName) {
+            const tile = document.getElementById(`tile-${r}-${c}`);
+            tile.classList.add('valid-tile');
+            
+            const label = document.createElement('div');
+            label.className = 'valid-label';
+            label.textContent = moveName;
+            tile.appendChild(label);
+        }
+
+        // --- THE DYNAMIC EXECUTION SEQUENCE ---
+        // This array determines what happens on every click of the button
+        const executionSteps = [
+            {
+                line: 'line-2',
+                action: () => {
+                    updateStatus('Initialize empty moves list.');
+                }
+            },
+            {
+                line: 'line-3',
+                type: 'eval-code',
+                action: () => {
+                    const result = targetRow > 0;
+                    updateStatus(`Evaluating: <b>row > 0</b> &rarr; ${targetRow} > 0 &rarr; <span style="color:${result?'#3fb950':'#f44336'}">${result}</span>`);
+                }
+            }
+        ];
+
+        // Conditional block for UP
+        if (targetRow > 0) {
+            executionSteps.push({
+                line: 'line-4',
+                action: () => {
+                    currentMoves.push("UP");
+                    updateMovesArray();
+                    highlightValidTile(targetRow - 1, targetCol, "UP");
+                    updateStatus('Condition true: Appended "UP".');
+                }
+            });
+        }
+
+        executionSteps.push({
+            line: 'line-5',
+            type: 'eval-code',
+            action: () => {
+                const result = targetRow < 2;
+                updateStatus(`Evaluating: <b>row < 2</b> &rarr; ${targetRow} < 2 &rarr; <span style="color:${result?'#3fb950':'#f44336'}">${result}</span>`);
+            }
+        });
+
+        // Conditional block for DOWN
+        if (targetRow < 2) {
+            executionSteps.push({
+                line: 'line-6',
+                action: () => {
+                    currentMoves.push("DOWN");
+                    updateMovesArray();
+                    highlightValidTile(targetRow + 1, targetCol, "DOWN");
+                    updateStatus('Condition true: Appended "DOWN".');
+                }
+            });
+        }
+
+        executionSteps.push({
+            line: 'line-7',
+            type: 'eval-code',
+            action: () => {
+                const result = targetCol > 0;
+                updateStatus(`Evaluating: <b>col > 0</b> &rarr; ${targetCol} > 0 &rarr; <span style="color:${result?'#3fb950':'#f44336'}">${result}</span>`);
+            }
+        });
+
+        // Conditional block for LEFT
+        if (targetCol > 0) {
+            executionSteps.push({
+                line: 'line-8',
+                action: () => {
+                    currentMoves.push("LEFT");
+                    updateMovesArray();
+                    highlightValidTile(targetRow, targetCol - 1, "LEFT");
+                    updateStatus('Condition true: Appended "LEFT".');
+                }
+            });
+        }
+
+        executionSteps.push({
+            line: 'line-9',
+            type: 'eval-code',
+            action: () => {
+                const result = targetCol < 2;
+                updateStatus(`Evaluating: <b>col < 2</b> &rarr; ${targetCol} < 2 &rarr; <span style="color:${result?'#3fb950':'#f44336'}">${result}</span>`);
+            }
+        });
+
+        // Conditional block for RIGHT
+        if (targetCol < 2) {
+            executionSteps.push({
+                line: 'line-10',
+                action: () => {
+                    currentMoves.push("RIGHT");
+                    updateMovesArray();
+                    highlightValidTile(targetRow, targetCol + 1, "RIGHT");
+                    updateStatus('Condition true: Appended "RIGHT".');
+                }
+            });
+        }
+
+        executionSteps.push({
+            line: 'line-11',
+            action: () => {
+                updateStatus(`Returned valid_moves: [${currentMoves.map(m=>`'${m}'`).join(', ')}]`);
+                const btn = document.getElementById('next-btn');
+                btn.textContent = "Execution Complete";
+                btn.disabled = true;
+            }
+        });
+
+        // Main Controller Function
+        function nextStep() {
+            if (stepIndex >= executionSteps.length) return;
+            
+            const step = executionSteps[stepIndex];
+            highlightLine(step.line, step.type || 'active-code');
+            step.action();
+            
+            stepIndex++;
+        }
+    </script>
+</body>
+</html>
