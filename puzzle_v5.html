@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Loop Visualizer</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #1e1e1e;
@@ -12,22 +16,29 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 20px;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
         }
 
         h2 {
             color: #569cd6;
             margin-bottom: 20px;
+            text-align: center;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
         }
 
         .container {
             display: flex;
-            gap: 40px;
+            flex-direction: row;
+            gap: 30px;
             background: #252526;
-            padding: 30px;
+            padding: 25px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             align-items: flex-start;
+            max-width: 900px;
+            width: 100%;
         }
 
         /* Grid Styles */
@@ -35,6 +46,7 @@
             display: grid;
             grid-template-columns: repeat(3, 80px);
             gap: 8px;
+            flex-shrink: 0;
         }
 
         .tile {
@@ -66,6 +78,8 @@
             line-height: 1.6;
             border: 1px solid #3c3c3c;
             min-width: 300px;
+            flex: 1;
+            overflow-x: auto;
         }
 
         .code-line {
@@ -73,11 +87,12 @@
             border-radius: 4px;
             transition: background-color 0.2s;
             border-left: 4px solid transparent;
+            white-space: nowrap;
         }
 
         /* Highlight States */
         .active-code {
-            background-color: #264f78; /* VS Code selection blue */
+            background-color: #264f78;
             border-left: 4px solid #569cd6;
         }
 
@@ -89,7 +104,7 @@
         }
 
         .found-tile {
-            background-color: #2ea043; /* Success green */
+            background-color: #2ea043;
             border: 4px solid #3fb950;
             color: white;
             transform: scale(1.1);
@@ -103,11 +118,13 @@
 
         /* Controls */
         .controls {
-            margin-top: 30px;
+            margin-top: 25px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            width: 100%;
+            max-width: 900px;
         }
 
         button {
@@ -120,6 +137,8 @@
             border-radius: 6px;
             cursor: pointer;
             transition: background-color 0.2s;
+            width: 100%;
+            max-width: 300px;
         }
 
         button:hover:not(:disabled) {
@@ -134,21 +153,88 @@
 
         #status {
             font-family: monospace;
-            font-size: 16px;
-            color: #ce9178; /* String color in VS Code */
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            color: #ce9178;
             background: #1e1e1e;
             padding: 10px 20px;
             border-radius: 6px;
             border: 1px solid #3c3c3c;
-            min-width: 300px;
+            width: 100%;
+            max-width: 900px;
             text-align: center;
+            word-break: break-word;
         }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
             100% { box-shadow: 0 0 20px 10px rgba(63, 185, 80, 0); }
         }
+
+        /* Tablet breakpoint */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+                gap: 25px;
+                padding: 20px;
+            }
+
+            .code-block {
+                min-width: unset;
+                width: 100%;
+                font-size: 14px;
+            }
+        }
+
+        /* Mobile breakpoint */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px 10px;
+            }
+
+            h2 {
+                margin-bottom: 15px;
+            }
+
+            .container {
+                padding: 15px;
+                gap: 20px;
+            }
+
+            .grid {
+                grid-template-columns: repeat(3, 65px);
+                gap: 6px;
+            }
+
+            .tile {
+                width: 65px;
+                height: 65px;
+                font-size: 22px;
+            }
+
+            .code-block {
+                padding: 15px;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+
+            .controls {
+                margin-top: 20px;
+                gap: 12px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 15px;
+                max-width: 100%;
+            }
+
+            #status {
+                padding: 8px 12px;
+            }
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -234,7 +320,7 @@
                 highlightLine('line-4');
                 const tileId = `tile-${row}-${col}`;
                 document.getElementById(tileId).classList.add('checking-tile');
-                
+
                 const val = initialState[row][col];
                 updateStatus(`Checking: is state[${row}][${col}] (${val}) == 0 ?`);
 
@@ -257,12 +343,12 @@
                 const line5 = document.getElementById('line-5');
                 line5.classList.remove('active-code');
                 line5.classList.add('found-code');
-                
+
                 const foundTile = document.getElementById(`tile-${row}-${col}`);
                 foundTile.classList.add('found-tile');
-                
+
                 updateStatus(`Condition True! Returning: ${row}, ${col}`);
-                
+
                 isDone = true;
                 const btn = document.getElementById('next-btn');
                 btn.textContent = "Search Complete";
