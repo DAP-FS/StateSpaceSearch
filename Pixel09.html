@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Log Transformation — Custom Image Tester & 3×3 Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #111827 100%);
+            color: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 12px;
+        }
+
+        .container {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            max-width: 650px;
+            width: 100%;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 12px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .formula-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* Image Upload & Display Section */
+        .upload-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .upload-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .image-preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .canvas-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+
+        .canvas-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+        }
+
+        .canvas-container-rel {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+
+        canvas.img-canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px solid #f43f5e;
+            background: rgba(244, 63, 94, 0.3);
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.8);
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        /* Controls */
+        .control-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #d1d5db;
+            font-weight: 500;
+        }
+
+        .slider-label span {
+            color: #38bdf8;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #374151;
+            border-radius: 4px;
+            outline: none;
+            accent-color: #38bdf8;
+        }
+
+        /* Responsive Matrices Grid */
+        .workbench {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        @media (max-width: 420px) {
+            .workbench {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .op-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        .matrix-box {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 14px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 220px;
+            width: 100%;
+        }
+
+        .matrix-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+
+        .pixel-cell {
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #374151;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .pixel-cell.active {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .cell-coord {
+            font-size: 8px;
+            opacity: 0.75;
+            font-weight: 600;
+        }
+
+        .cell-val {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .op-arrow {
+            font-size: 20px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        /* Detail Breakdown Card */
+        .analysis-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .analysis-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #818cf8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .math-breakdown {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #f3f4f6;
+            background: #1f2937;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 3px solid #38bdf8;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .note-text {
+            font-size: 11px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .hl-r { color: #f43f5e; font-weight: bold; }
+        .hl-s { color: #4ade80; font-weight: bold; }
+
+        /* Graph Canvas Container */
+        .graph-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        canvas.graph-canvas {
+            width: 100%;
+            height: 140px;
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-secondary {
+            background: #374151;
+            color: #e5e7eb;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">Log Transformation Tester</div>
+            <div class="subtitle">Upload Image ➔ Test Function ➔ Inspect 3×3 Matrix</div>
+            <div class="formula-badge">s = c · ln(1 + r)</div>
+        </div>
+
+        <!-- Image Upload & Preview Section -->
+        <div class="upload-card">
+            <div class="upload-actions">
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">
+                    📁 Upload Custom Image
+                </button>
+                <button class="btn btn-secondary" id="btnLoadSample">
+                    🖼️ Default Pattern
+                </button>
+            </div>
+
+            <div class="image-preview-grid">
+                <div class="canvas-wrapper">
+                    <div class="canvas-label">Tap to Sample (f(x,y))</div>
+                    <div class="canvas-container-rel" id="srcContainer">
+                        <canvas id="srcCanvas" class="img-canvas"></canvas>
+                        <div id="selectionBox" class="selection-box"></div>
+                    </div>
+                </div>
+                <div class="canvas-wrapper">
+                    <div class="canvas-label">Log Transformed (g(x,y))</div>
+                    <div class="canvas-container-rel">
+                        <canvas id="dstCanvas" class="img-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scaling Constant Control -->
+        <div class="control-card">
+            <div class="slider-label">
+                <span>Scaling Constant (c):</span>
+                <span id="cValueDisplay">45.98</span>
+            </div>
+            <input type="range" id="cSlider" min="10" max="80" step="0.5" value="45.98">
+        </div>
+
+        <!-- Sampled 3x3 Matrix Workbench -->
+        <div class="workbench">
+            <!-- Input Grid -->
+            <div class="matrix-box">
+                <div class="matrix-title">Sampled 3×3 R = f(x,y)</div>
+                <div class="grid-3x3" id="inputGrid"></div>
+            </div>
+
+            <div class="op-arrow">➔</div>
+
+            <!-- Output Grid -->
+            <div class="matrix-box">
+                <div class="matrix-title">Transformed 3×3 S = g(x,y)</div>
+                <div class="grid-3x3" id="outputGrid"></div>
+            </div>
+        </div>
+
+        <!-- Analytical Inspector -->
+        <div class="analysis-card">
+            <div class="analysis-title">Pixel Transformation Inspector</div>
+            <div class="math-breakdown" id="mathBreakdown">
+                Tap anywhere on the left image to sample a 3×3 matrix!
+            </div>
+            <div class="note-text" id="noteText">
+                <strong>Point Processing Principle:</strong> Notice how applying $s = c \cdot \ln(1 + r)$ to the uploaded image works pixel-by-pixel. Low gray levels are expanded while high levels are compressed.
+            </div>
+        </div>
+
+        <!-- Curve Plot -->
+        <div class="graph-card">
+            <div class="matrix-title">Transformation Curve T(r)</div>
+            <canvas id="graphCanvas" class="graph-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // State variables
+            let matrixR = [
+                [10, 25, 45],
+                [15, 30, 60],
+                [20, 50, 90]
+            ];
+            let cVal = 45.9859; // Default c = 255 / ln(1 + 255)
+            let activeRow = 1;
+            let activeCol = 1;
+
+            // Canvas & Elements
+            const imageInput = document.getElementById('imageInput');
+            const btnLoadSample = document.getElementById('btnLoadSample');
+            const srcCanvas = document.getElementById('srcCanvas');
+            const dstCanvas = document.getElementById('dstCanvas');
+            const ctxSrc = srcCanvas.getContext('2d');
+            const ctxDst = dstCanvas.getContext('2d');
+            const selectionBox = document.getElementById('selectionBox');
+            const srcContainer = document.getElementById('srcContainer');
+
+            const inputGrid = document.getElementById('inputGrid');
+            const outputGrid = document.getElementById('outputGrid');
+            const mathBreakdown = document.getElementById('mathBreakdown');
+            const noteText = document.getElementById('noteText');
+            const cSlider = document.getElementById('cSlider');
+            const cValueDisplay = document.getElementById('cValueDisplay');
+            const graphCanvas = document.getElementById('graphCanvas');
+            const ctxGraph = graphCanvas.getContext('2d');
+
+            let currentImageData = null; // Stores loaded grayscale image pixel data
+            let imgWidth = 0;
+            let imgHeight = 0;
+            let sampledX = 0;
+            let sampledY = 0;
+
+            function init() {
+                resizeCanvas();
+                createSyntheticSampleImage();
+                renderGrids();
+            }
+
+            // Log formula computation
+            function logTransform(r, c) {
+                const s = c * Math.log(1 + r);
+                return Math.min(255, Math.max(0, Math.round(s)));
+            }
+
+            // Generate synthetic low-contrast dark image with details in shadows
+            function createSyntheticSampleImage() {
+                imgWidth = 120;
+                imgHeight = 120;
+                srcCanvas.width = imgWidth;
+                srcCanvas.height = imgHeight;
+                dstCanvas.width = imgWidth;
+                dstCanvas.height = imgHeight;
+
+                const imgData = ctxSrc.createImageData(imgWidth, imgHeight);
+                for (let y = 0; y < imgHeight; y++) {
+                    for (let x = 0; x < imgWidth; x++) {
+                        const idx = (y * imgWidth + x) * 4;
+                        // Dark details texture + radial dark gradient
+                        const dist = Math.sqrt(Math.pow(x - 60, 2) + Math.pow(y - 60, 2));
+                        let val = Math.floor((x / imgWidth) * 40 + (y / imgHeight) * 40);
+                        if (dist < 30) val += 15;
+                        if (dist < 15) val += 30;
+
+                        val = Math.min(255, val);
+
+                        imgData.data[idx] = val;
+                        imgData.data[idx + 1] = val;
+                        imgData.data[idx + 2] = val;
+                        imgData.data[idx + 3] = 255;
+                    }
+                }
+                ctxSrc.putImageData(imgData, 0, 0);
+                currentImageData = ctxSrc.getImageData(0, 0, imgWidth, imgHeight);
+
+                processFullImageLog();
+                sample3x3Region(60, 60);
+            }
+
+            // Apply Log Transformation to full image canvas
+            function processFullImageLog() {
+                if (!currentImageData) return;
+
+                const src = currentImageData.data;
+                const dstData = ctxDst.createImageData(imgWidth, imgHeight);
+                const dst = dstData.data;
+
+                for (let i = 0; i < src.length; i += 4) {
+                    // Grayscale conversion (luminance formula)
+                    const gray = Math.round(0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]);
+                    const s = logTransform(gray, cVal);
+
+                    dst[i] = s;     // R
+                    dst[i + 1] = s; // G
+                    dst[i + 2] = s; // B
+                    dst[i + 3] = 255; // A
+                }
+
+                ctxDst.putImageData(dstData, 0, 0);
+            }
+
+            // Sample 3x3 matrix from image coordinates (cx, cy)
+            function sample3x3Region(cx, cy) {
+                if (!currentImageData) return;
+
+                // Clamp center pixel
+                cx = Math.max(1, Math.min(imgWidth - 2, cx));
+                cy = Math.max(1, Math.min(imgHeight - 2, cy));
+
+                sampledX = cx;
+                sampledY = cy;
+
+                const src = currentImageData.data;
+
+                for (let r = -1; r <= 1; r++) {
+                    for (let c = -1; c <= 1; c++) {
+                        const px = cx + c;
+                        const py = cy + r;
+                        const idx = (py * imgWidth + px) * 4;
+                        const gray = Math.round(0.299 * src[idx] + 0.587 * src[idx + 1] + 0.114 * src[idx + 2]);
+
+                        matrixR[r + 1][c + 1] = gray;
+                    }
+                }
+
+                updateSelectionBox(cx, cy);
+                renderGrids();
+                selectPixel(activeRow, activeCol);
+            }
+
+            function updateSelectionBox(cx, cy) {
+                const rect = srcCanvas.getBoundingClientRect();
+                const scaleX = rect.width / imgWidth;
+                const scaleY = rect.height / imgHeight;
+
+                const boxW = 3 * scaleX;
+                const boxH = 3 * scaleY;
+
+                selectionBox.style.width = `${Math.max(12, boxW)}px`;
+                selectionBox.style.height = `${Math.max(12, boxH)}px`;
+                selectionBox.style.left = `${(cx / imgWidth) * 100}%`;
+                selectionBox.style.top = `${(cy / imgHeight) * 100}%`;
+                selectionBox.style.display = 'block';
+            }
+
+            // Handle user image upload
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Max dimension 250px for fast mobile real-time processing
+                        const maxDim = 250;
+                        let w = img.width;
+                        let h = img.height;
+
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) {
+                                h = Math.round((h * maxDim) / w);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w * maxDim) / h);
+                                h = maxDim;
+                            }
+                        }
+
+                        imgWidth = w;
+                        imgHeight = h;
+                        srcCanvas.width = w;
+                        srcCanvas.height = h;
+                        dstCanvas.width = w;
+                        dstCanvas.height = h;
+
+                        ctxSrc.drawImage(img, 0, 0, w, h);
+                        currentImageData = ctxSrc.getImageData(0, 0, w, h);
+
+                        processFullImageLog();
+                        sample3x3Region(Math.floor(w / 2), Math.floor(h / 2));
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Handle touch/click on source image
+            srcCanvas.addEventListener('pointerdown', (e) => {
+                const rect = srcCanvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+
+                const px = Math.floor((clickX / rect.width) * imgWidth);
+                const py = Math.floor((clickY / rect.height) * imgHeight);
+
+                sample3x3Region(px, py);
+            });
+
+            // Render 3x3 Matrices
+            function renderGrids() {
+                inputGrid.innerHTML = '';
+                outputGrid.innerHTML = '';
+
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        const valR = matrixR[r][c];
+                        const valS = logTransform(valR, cVal);
+
+                        const cellR = createCell(r, c, valR, true);
+                        const cellS = createCell(r, c, valS, false);
+
+                        inputGrid.appendChild(cellR);
+                        outputGrid.appendChild(cellS);
+                    }
+                }
+            }
+
+            function createCell(row, col, val, isInput) {
+                const cell = document.createElement('div');
+                cell.className = 'pixel-cell';
+                if (row === activeRow && col === activeCol) {
+                    cell.classList.add('active');
+                }
+
+                cell.style.backgroundColor = `rgb(${val}, ${val}, ${val})`;
+                cell.style.color = val > 128 ? '#000000' : '#ffffff';
+
+                const coord = document.createElement('div');
+                coord.className = 'cell-coord';
+                coord.textContent = `(${row},${col})`;
+
+                const valDisplay = document.createElement('div');
+                valDisplay.className = 'cell-val';
+                valDisplay.textContent = val;
+
+                cell.appendChild(coord);
+                cell.appendChild(valDisplay);
+
+                cell.addEventListener('click', () => selectPixel(row, col));
+                return cell;
+            }
+
+            function selectPixel(row, col) {
+                activeRow = row;
+                activeCol = col;
+
+                const inputCells = inputGrid.children;
+                const outputCells = outputGrid.children;
+
+                for (let i = 0; i < 9; i++) {
+                    inputCells[i].classList.remove('active');
+                    outputCells[i].classList.remove('active');
+                }
+
+                const index = row * 3 + col;
+                if (inputCells[index]) inputCells[index].classList.add('active');
+                if (outputCells[index]) outputCells[index].classList.add('active');
+
+                const rVal = matrixR[row][col];
+                const sVal = logTransform(rVal, cVal);
+
+                mathBreakdown.innerHTML = `
+                    Selected Pixel r = <span class="hl-r">${rVal}</span> ➔ s = ${cVal.toFixed(1)} · ln(1 + <span class="hl-r">${rVal}</span>) = <span class="hl-s">${sVal}</span>
+                `;
+
+                if (rVal < 50) {
+                    noteText.innerHTML = `
+                        <strong>Dark Pixel Expansion:</strong> Intensity <span class="hl-r">${rVal}</span> expanded significantly to <span class="hl-s">${sVal}</span>, highlighting hidden details in dark image regions.
+                    `;
+                } else if (rVal > 180) {
+                    noteText.innerHTML = `
+                        <strong>Bright Pixel Compression:</strong> High intensity <span class="hl-r">${rVal}</span> mapped to <span class="hl-s">${sVal}</span> (compressed dynamic range).
+                    `;
+                } else {
+                    noteText.innerHTML = `
+                        <strong>Mid-Tone Processing:</strong> Intensity <span class="hl-r">${rVal}</span> mapped to <span class="hl-s">${sVal}</span>.
+                    `;
+                }
+
+                drawGraph();
+            }
+
+            function drawGraph() {
+                const w = graphCanvas.width;
+                const h = graphCanvas.height;
+                const pad = 25;
+
+                ctxGraph.clearRect(0, 0, w, h);
+
+                const gw = w - pad * 2;
+                const gh = h - pad * 2;
+
+                // Box
+                ctxGraph.strokeStyle = '#374151';
+                ctxGraph.lineWidth = 1;
+                ctxGraph.strokeRect(pad, pad, gw, gh);
+
+                // Identity Line (s = r)
+                ctxGraph.setLineDash([3, 3]);
+                ctxGraph.strokeStyle = '#4b5563';
+                ctxGraph.beginPath();
+                ctxGraph.moveTo(pad, h - pad);
+                ctxGraph.lineTo(w - pad, pad);
+                ctxGraph.stroke();
+                ctxGraph.setLineDash([]);
+
+                // Log Curve
+                ctxGraph.strokeStyle = '#38bdf8';
+                ctxGraph.lineWidth = 2.5;
+                ctxGraph.beginPath();
+
+                for (let r = 0; r <= 255; r++) {
+                    const s = logTransform(r, cVal);
+                    const x = pad + (r / 255) * gw;
+                    const y = (h - pad) - (s / 255) * gh;
+
+                    if (r === 0) ctxGraph.moveTo(x, y);
+                    else ctxGraph.lineTo(x, y);
+                }
+                ctxGraph.stroke();
+
+                // Highlight Selected Pixel
+                const rVal = matrixR[activeRow][activeCol];
+                const sVal = logTransform(rVal, cVal);
+
+                const cx = pad + (rVal / 255) * gw;
+                const cy = (h - pad) - (sVal / 255) * gh;
+
+                ctxGraph.setLineDash([2, 2]);
+                ctxGraph.strokeStyle = '#f43f5e';
+                ctxGraph.beginPath();
+                ctxGraph.moveTo(cx, h - pad);
+                ctxGraph.lineTo(cx, cy);
+                ctxGraph.lineTo(pad, cy);
+                ctxGraph.stroke();
+                ctxGraph.setLineDash([]);
+
+                ctxGraph.fillStyle = '#38bdf8';
+                ctxGraph.beginPath();
+                ctxGraph.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctxGraph.fill();
+                ctxGraph.strokeStyle = '#ffffff';
+                ctxGraph.lineWidth = 1.5;
+                ctxGraph.stroke();
+
+                // Labels
+                ctxGraph.fillStyle = '#9ca3af';
+                ctxGraph.font = '9px Inter';
+                ctxGraph.fillText('0', pad - 8, h - pad + 10);
+                ctxGraph.fillText('255 (r)', w - pad - 15, h - pad + 10);
+                ctxGraph.fillText('255 (s)', pad - 12, pad - 4);
+            }
+
+            function resizeCanvas() {
+                const rect = graphCanvas.parentElement.getBoundingClientRect();
+                graphCanvas.width = rect.width - 24;
+                graphCanvas.height = 140;
+            }
+
+            // Slider event
+            cSlider.addEventListener('input', (e) => {
+                cVal = parseFloat(e.target.value);
+                cValueDisplay.textContent = cVal.toFixed(2);
+                processFullImageLog();
+                renderGrids();
+                selectPixel(activeRow, activeCol);
+            });
+
+            btnLoadSample.addEventListener('click', createSyntheticSampleImage);
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawGraph();
+                if (currentImageData) updateSelectionBox(sampledX, sampledY);
+            });
+
+            init();
+        })();
+    </script>
+</body>
+</html>

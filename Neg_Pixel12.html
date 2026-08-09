@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point Processing: Image Negative Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --primary: #38bdf8;
+            --primary-accent: #0284c7;
+            --danger: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .formula-box {
+            background: #090d16;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        /* Module 1: Single Pixel & Graph */
+        .single-pixel-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        @media (max-width: 550px) {
+            .single-pixel-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .swatch-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .swatch-pair {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .swatch-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: background-color 0.1s ease;
+        }
+
+        .slider-control {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        canvas.graph-canvas {
+            width: 100%;
+            height: 180px;
+            background: #090d16;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Module 2: Matrix & Step Simulator */
+        .matrix-layout {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 8px;
+        }
+
+        @media (max-width: 500px) {
+            .matrix-layout {
+                flex-direction: column;
+            }
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 170px;
+            height: 170px;
+        }
+
+        .matrix-cell {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 700;
+            user-select: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .matrix-cell.selected {
+            border-color: var(--danger) !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+            z-index: 10;
+        }
+
+        .cell-coord {
+            font-size: 8px;
+            opacity: 0.7;
+        }
+
+        .matrix-input-cell {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: inherit;
+            text-align: center;
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .calc-simulation-box {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .calc-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #cbd5e1;
+        }
+
+        .hl-r { color: var(--primary); font-weight: bold; }
+        .hl-s { color: var(--danger); font-weight: bold; }
+
+        /* Module 3: Upload Tester */
+        .upload-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .image-compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .image-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .image-view span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        canvas.img-canvas {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            object-fit: contain;
+            cursor: crosshair;
+        }
+
+        .inspector-badge {
+            font-size: 11px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--border-color);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary-accent);
+            color: #fff;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Point Processing: Image Negative</h1>
+        <div class="subtitle">Interactive Point Processing Learning Environment</div>
+    </header>
+
+    <!-- Formula Reference -->
+    <div class="formula-box">
+        Point Transformation Formula: <strong>s = T(r) = (L - 1) - r = 255 - r</strong>
+    </div>
+
+    <!-- MODULE 1: Single Pixel Intuition -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 1: Single Pixel Mechanics</span>
+        </div>
+        <div class="single-pixel-layout">
+            <div class="swatch-container">
+                <div class="swatch-pair">
+                    <div class="swatch-box" id="swatchR">
+                        <span>r</span>
+                        <span id="valR">128</span>
+                    </div>
+                    <span style="font-size:20px; font-weight:bold; color:var(--primary)">➔</span>
+                    <div class="swatch-box" id="swatchS">
+                        <span>s</span>
+                        <span id="valS">127</span>
+                    </div>
+                </div>
+
+                <div class="slider-control">
+                    <label style="font-size: 12px; color: var(--text-muted);">Adjust Input Intensity (r):</label>
+                    <input type="range" id="pixelSlider" min="0" max="255" value="128">
+                </div>
+            </div>
+
+            <div>
+                <canvas id="graphCanvas" class="graph-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODULE 2: Matrix & Step Calculations -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 2: 3×3 Matrix Calculation Simulator</span>
+            <button class="btn" id="btnRandomizeMatrix">🎲 Randomize Values</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted);">
+            Click any cell in the <strong>Input Matrix (R)</strong> or edit its value to simulate point calculation step-by-step.
+        </p>
+
+        <div class="matrix-layout">
+            <div>
+                <div style="font-size: 11px; text-align:center; color:var(--text-muted); margin-bottom:4px;">Input Matrix R = f(x,y)</div>
+                <div class="matrix-grid" id="inputMatrixGrid"></div>
+            </div>
+            <span style="font-size:24px; font-weight:bold; color:var(--primary)">➔</span>
+            <div>
+                <div style="font-size: 11px; text-align:center; color:var(--text-muted); margin-bottom:4px;">Output Negative S = g(x,y)</div>
+                <div class="matrix-grid" id="outputMatrixGrid"></div>
+            </div>
+        </div>
+
+        <!-- Simulated Calculation Breakdown -->
+        <div class="calc-simulation-box" id="calcSimBox">
+            <!-- Dynamic calculation steps will render here -->
+        </div>
+    </div>
+
+    <!-- MODULE 3: Upload Image Tester -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 3: Custom Image Upload Tester</span>
+        </div>
+        <div class="upload-controls">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">📁 Upload Image File</button>
+            <button class="btn" id="btnSamplePattern">🖼️ Load Sample Pattern</button>
+        </div>
+
+        <div class="image-compare-grid">
+            <div class="image-view">
+                <span>Original Image f(x,y) [Tap to Sample]</span>
+                <canvas id="srcCanvas" class="img-canvas"></canvas>
+            </div>
+            <div class="image-view">
+                <span>Negative Image g(x,y)</span>
+                <canvas id="dstCanvas" class="img-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="inspector-badge" id="imageInspectorBadge">
+            Tap anywhere on the original image to inspect pixel coordinates and point calculation!
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- MODULE 1: SINGLE PIXEL & GRAPH ---
+    const pixelSlider = document.getElementById('pixelSlider');
+    const swatchR = document.getElementById('swatchR');
+    const swatchS = document.getElementById('swatchS');
+    const valR = document.getElementById('valR');
+    const valS = document.getElementById('valS');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const ctxGraph = graphCanvas.getContext('2d');
+
+    function updateSinglePixel(r) {
+        const s = 255 - r;
+        valR.textContent = r;
+        valS.textContent = s;
+
+        swatchR.style.backgroundColor = `rgb(${r},${r},${r})`;
+        swatchR.style.color = r > 128 ? '#000' : '#fff';
+
+        swatchS.style.backgroundColor = `rgb(${s},${s},${s})`;
+        swatchS.style.color = s > 128 ? '#000' : '#fff';
+
+        drawGraph(r, s);
+    }
+
+    function drawGraph(activeR, activeS) {
+        const w = graphCanvas.width = graphCanvas.parentElement.clientWidth;
+        const h = graphCanvas.height = 180;
+        const pad = 30;
+
+        ctxGraph.clearRect(0, 0, w, h);
+
+        const gw = w - pad * 2;
+        const gh = h - pad * 2;
+
+        // Border Axes
+        ctxGraph.strokeStyle = '#334155';
+        ctxGraph.lineWidth = 1;
+        ctxGraph.strokeRect(pad, pad, gw, gh);
+
+        // Transformation Line: s = 255 - r
+        ctxGraph.strokeStyle = '#38bdf8';
+        ctxGraph.lineWidth = 2.5;
+        ctxGraph.beginPath();
+        ctxGraph.moveTo(pad, pad); // r=0, s=255
+        ctxGraph.lineTo(w - pad, h - pad); // r=255, s=0
+        ctxGraph.stroke();
+
+        // Active Point Marker
+        const cx = pad + (activeR / 255) * gw;
+        const cy = (h - pad) - (activeS / 255) * gh;
+
+        ctxGraph.setLineDash([3, 3]);
+        ctxGraph.strokeStyle = '#f43f5e';
+        ctxGraph.beginPath();
+        ctxGraph.moveTo(cx, h - pad);
+        ctxGraph.lineTo(cx, cy);
+        ctxGraph.lineTo(pad, cy);
+        ctxGraph.stroke();
+        ctxGraph.setLineDash([]);
+
+        ctxGraph.fillStyle = '#f43f5e';
+        ctxGraph.beginPath();
+        ctxGraph.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctxGraph.fill();
+
+        // Axis Labels
+        ctxGraph.fillStyle = '#94a3b8';
+        ctxGraph.font = '10px Inter';
+        ctxGraph.fillText('r=0', pad - 10, h - pad + 15);
+        ctxGraph.fillText('r=255', w - pad - 15, h - pad + 15);
+        ctxGraph.fillText('s=255', pad - 25, pad - 5);
+    }
+
+    pixelSlider.addEventListener('input', (e) => updateSinglePixel(parseInt(e.target.value)));
+
+    // --- MODULE 2: MATRIX CALCULATION SIMULATOR ---
+    let matrixData = [
+        [15, 200, 80],
+        [0, 128, 255],
+        [190, 45, 220]
+    ];
+    let selectedRow = 1;
+    let selectedCol = 1;
+
+    const inputMatrixGrid = document.getElementById('inputMatrixGrid');
+    const outputMatrixGrid = document.getElementById('outputMatrixGrid');
+    const calcSimBox = document.getElementById('calcSimBox');
+
+    function selectCell(row, col) {
+        selectedRow = row;
+        selectedCol = col;
+        renderMatrices();
+        updateCalculationSimulation();
+    }
+
+    function renderMatrices() {
+        inputMatrixGrid.innerHTML = '';
+        outputMatrixGrid.innerHTML = '';
+
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const valIn = matrixData[r][c];
+                const valOut = 255 - valIn;
+                const isSelected = (r === selectedRow && c === selectedCol);
+
+                // Input Cell
+                const cellIn = document.createElement('div');
+                cellIn.className = `matrix-cell ${isSelected ? 'selected' : ''}`;
+                cellIn.style.backgroundColor = `rgb(${valIn},${valIn},${valIn})`;
+                cellIn.style.color = valIn > 128 ? '#000' : '#fff';
+                cellIn.onclick = () => selectCell(r, c);
+
+                const coordIn = document.createElement('span');
+                coordIn.className = 'cell-coord';
+                coordIn.textContent = `(${r},${c})`;
+
+                const inputField = document.createElement('input');
+                inputField.className = 'matrix-input-cell';
+                inputField.value = valIn;
+                inputField.onclick = (e) => e.stopPropagation();
+                inputField.addEventListener('input', (e) => {
+                    let v = parseInt(e.target.value) || 0;
+                    v = Math.max(0, Math.min(255, v));
+                    matrixData[r][c] = v;
+                    selectCell(r, c);
+                });
+
+                cellIn.appendChild(coordIn);
+                cellIn.appendChild(inputField);
+
+                // Output Cell
+                const cellOut = document.createElement('div');
+                cellOut.className = `matrix-cell ${isSelected ? 'selected' : ''}`;
+                cellOut.style.backgroundColor = `rgb(${valOut},${valOut},${valOut})`;
+                cellOut.style.color = valOut > 128 ? '#000' : '#fff';
+                cellOut.onclick = () => selectCell(r, c);
+
+                const coordOut = document.createElement('span');
+                coordOut.className = 'cell-coord';
+                coordOut.textContent = `(${r},${c})`;
+
+                const textOut = document.createElement('span');
+                textOut.textContent = valOut;
+
+                cellOut.appendChild(coordOut);
+                cellOut.appendChild(textOut);
+
+                inputMatrixGrid.appendChild(cellIn);
+                outputMatrixGrid.appendChild(cellOut);
+            }
+        }
+    }
+
+    function updateCalculationSimulation() {
+        const rVal = matrixData[selectedRow][selectedCol];
+        const sVal = 255 - rVal;
+
+        calcSimBox.innerHTML = `
+            <div class="calc-step">
+                <strong>Target Cell:</strong> Row ${selectedRow}, Col ${selectedCol}
+            </div>
+            <div class="calc-step">
+                <strong>Step 1 (Read Input):</strong> r = <span class="hl-r">${rVal}</span>
+            </div>
+            <div class="calc-step">
+                <strong>Step 2 (Apply Inversion):</strong> s = 255 - r = 255 - <span class="hl-r">${rVal}</span>
+            </div>
+            <div class="calc-step">
+                <strong>Step 3 (Resulting Intensity):</strong> s = <span class="hl-s">${sVal}</span>
+            </div>
+        `;
+    }
+
+    document.getElementById('btnRandomizeMatrix').addEventListener('click', () => {
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                matrixData[r][c] = Math.floor(Math.random() * 256);
+            }
+        }
+        renderMatrices();
+        updateCalculationSimulation();
+    });
+
+    // --- MODULE 3: IMAGE UPLOAD TESTER ---
+    const imageInput = document.getElementById('imageInput');
+    const srcCanvas = document.getElementById('srcCanvas');
+    const dstCanvas = document.getElementById('dstCanvas');
+    const ctxSrc = srcCanvas.getContext('2d');
+    const ctxDst = dstCanvas.getContext('2d');
+    const imageInspectorBadge = document.getElementById('imageInspectorBadge');
+
+    let currentImageData = null;
+    let imgW = 0, imgH = 0;
+
+    function applyNegativeTransformation() {
+        if (!currentImageData) return;
+
+        const srcData = currentImageData.data;
+        const dstImgData = ctxDst.createImageData(imgW, imgH);
+        const dstData = dstImgData.data;
+
+        for (let i = 0; i < srcData.length; i += 4) {
+            // Convert to grayscale intensity
+            const gray = Math.round(0.299 * srcData[i] + 0.587 * srcData[i+1] + 0.114 * srcData[i+2]);
+            const neg = 255 - gray;
+
+            dstData[i] = neg;       // R
+            dstData[i+1] = neg;     // G
+            dstData[i+2] = neg;     // B
+            dstData[i+3] = 255;     // Alpha
+        }
+
+        ctxDst.putImageData(dstImgData, 0, 0);
+    }
+
+    function loadSamplePattern() {
+        imgW = 150;
+        imgH = 150;
+        srcCanvas.width = imgW;
+        srcCanvas.height = imgH;
+        dstCanvas.width = imgW;
+        dstCanvas.height = imgH;
+
+        const imgData = ctxSrc.createImageData(imgW, imgH);
+        for (let y = 0; y < imgH; y++) {
+            for (let x = 0; x < imgW; x++) {
+                const idx = (y * imgW + x) * 4;
+                const isChecker = (Math.floor(x / 15) + Math.floor(y / 15)) % 2 === 0;
+                let val = isChecker ? 210 : 35;
+
+                // Center Circle Detail
+                const dist = Math.sqrt((x - 75)**2 + (y - 75)**2);
+                if (dist < 30) val = 255 - val;
+
+                imgData.data[idx] = val;
+                imgData.data[idx+1] = val;
+                imgData.data[idx+2] = val;
+                imgData.data[idx+3] = 255;
+            }
+        }
+        ctxSrc.putImageData(imgData, 0, 0);
+        currentImageData = ctxSrc.getImageData(0, 0, imgW, imgH);
+        applyNegativeTransformation();
+    }
+
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 200;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+
+                imgW = w;
+                imgH = h;
+                srcCanvas.width = w;
+                srcCanvas.height = h;
+                dstCanvas.width = w;
+                dstCanvas.height = h;
+
+                ctxSrc.drawImage(img, 0, 0, w, h);
+                currentImageData = ctxSrc.getImageData(0, 0, w, h);
+                applyNegativeTransformation();
+                imageInspectorBadge.innerHTML = `Loaded image size: ${w}×${h}px. Tap anywhere to inspect pixel negative calculation!`;
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    srcCanvas.addEventListener('pointerdown', (e) => {
+        if (!currentImageData) return;
+
+        const rect = srcCanvas.getBoundingClientRect();
+        const clickX = Math.floor(((e.clientX - rect.left) / rect.width) * imgW);
+        const clickY = Math.floor(((e.clientY - rect.top) / rect.height) * imgH);
+
+        const idx = (clickY * imgW + clickX) * 4;
+        const src = currentImageData.data;
+        const r = Math.round(0.299 * src[idx] + 0.587 * src[idx+1] + 0.114 * src[idx+2]);
+        const s = 255 - r;
+
+        imageInspectorBadge.innerHTML = `
+            <strong>Pixel Inspector at (${clickX}, ${clickY}):</strong> Input Intensity r = ${r} ➔ Output Negative s = 255 - ${r} = <strong>${s}</strong>
+        `;
+    });
+
+    document.getElementById('btnSamplePattern').addEventListener('click', loadSamplePattern);
+
+    // Initialize Studio
+    updateSinglePixel(128);
+    renderMatrices();
+    updateCalculationSimulation();
+    loadSamplePattern();
+
+    window.addEventListener('resize', () => {
+        drawGraph(parseInt(pixelSlider.value), 255 - parseInt(pixelSlider.value));
+    });
+</script>
+</body>
+</html>

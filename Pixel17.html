@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Filtering & 2D Convolution Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --primary: #38bdf8;
+            --primary-accent: #0284c7;
+            --danger: #f43f5e;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --padded-bg: rgba(245, 158, 11, 0.12);
+            --padded-border: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .formula-box {
+            background: #090d16;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            font-family: monospace;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* Controls Section */
+        .controls-grid {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        select, input[type="number"] {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        select:focus, input[type="number"]:focus {
+            border-color: var(--primary);
+        }
+
+        .preset-container {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .btn-preset {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-preset:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Kernel Grid Controls */
+        .kernel-editor-layout {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        @media (max-width: 600px) {
+            .kernel-editor-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .kernel-matrix {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 180px;
+            height: 180px;
+        }
+
+        .kernel-cell {
+            background: #090d16;
+            border: 1px solid var(--primary);
+            border-radius: 6px;
+            color: var(--primary);
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 13px;
+            text-align: center;
+            outline: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Module 2: Matrix Grid & Padding Visualizer */
+        .matrix-viz-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .matrix-legend {
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .padded-grid-wrapper {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 10px;
+            font-weight: 700;
+            user-select: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .grid-cell.padded {
+            background-color: var(--padded-bg);
+            border-color: var(--padded-border);
+            color: var(--warning);
+        }
+
+        .grid-cell.in-window {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+            z-index: 5;
+        }
+
+        .grid-cell.center-cell {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .cell-tag {
+            font-size: 7px;
+            opacity: 0.7;
+        }
+
+        /* Math Step Inspector */
+        .calc-simulation-box {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .calc-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #cbd5e1;
+            flex-wrap: wrap;
+        }
+
+        .hl-p { color: var(--warning); font-weight: bold; }
+        .hl-k { color: var(--primary); font-weight: bold; }
+        .hl-res { color: var(--danger); font-weight: bold; }
+
+        /* Module 3: Image Canvases */
+        .upload-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .image-compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 500px) {
+            .image-compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .image-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+
+        .image-view span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        canvas.img-canvas {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            object-fit: contain;
+            cursor: crosshair;
+        }
+
+        .inspector-badge {
+            font-size: 11px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            line-height: 1.5;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--border-color);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary-accent);
+            color: #fff;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        footer {
+            text-align: center;
+            padding: 16px;
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Spatial Filter & 2D Convolution Studio</h1>
+        <div class="subtitle">Interactive Spatial Neighborhood Processing & Boundary Padding Laboratory</div>
+    </header>
+
+    <!-- Formula Reference -->
+    <div class="formula-box">
+        <span>2D Spatial Convolution: <strong>g(x,y) = ∑∑ w(s,t) · f(x+s, y+t)</strong></span>
+        <span style="color: var(--text-muted); font-size: 11px;">Scaled output: <strong>g(x,y) = Clamp( [ ∑ w · f / Divisor ] + Bias )</strong></span>
+    </div>
+
+    <!-- GLOBAL CONTROLS & KERNEL CONFIG -->
+    <div class="controls-grid">
+        <div class="control-group">
+            <label for="kernelSelect">Select Filter Kernel Presets:</label>
+            <select id="kernelSelect">
+                <option value="boxBlur">Box Blur (3x3 Smoothing)</option>
+                <option value="gaussianBlur">Gaussian Blur (3x3 Weighted)</option>
+                <option value="sharpen">Sharpen (High-Pass Contrast)</option>
+                <option value="sobelX">Sobel Edge Detection (Horizontal Gx)</option>
+                <option value="sobelY">Sobel Edge Detection (Vertical Gy)</option>
+                <option value="laplacian">Laplacian Edge Operator</option>
+                <option value="emboss">Emboss Filter</option>
+                <option value="identity">Identity (Pass-through)</option>
+                <option value="custom">Custom Editable Kernel</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="paddingSelect">Boundary Padding Strategy:</label>
+            <select id="paddingSelect">
+                <option value="zero">Zero Padding (Border = 0)</option>
+                <option value="clamp">Clamp / Replicate Edge (Extend Border)</option>
+                <option value="reflect">Reflect / Mirror Boundary</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="kernelDivisor">Kernel Scale Divisor:</label>
+            <input type="number" id="kernelDivisor" value="9" step="1" min="1">
+        </div>
+
+        <div class="control-group">
+            <label for="kernelBias">Post-Convolution Bias Offset:</label>
+            <input type="number" id="kernelBias" value="0" step="1">
+        </div>
+    </div>
+
+    <!-- MODULE 1: Kernel Matrix Weights Editor -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 1: 3×3 Spatial Filter Kernel Matrix W(s,t)</span>
+            <button class="btn" id="btnNormalizeKernel">⚡ Normalize Weights</button>
+        </div>
+        <div class="kernel-editor-layout">
+            <div class="kernel-matrix" id="kernelMatrixGrid">
+                <!-- 3x3 inputs generated dynamically -->
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                <p><strong>Kernel Weight Rules:</strong></p>
+                <ul style="margin-left: 18px; margin-top: 4px;">
+                    <li><strong>Blurring (Smoothing):</strong> Sum of weights = Divisor (e.g., 1/9). Preserves global brightness.</li>
+                    <li><strong>Edge Detection (Sobel/Laplacian):</strong> Sum of weights = 0. Responds to spatial gradients/edges.</li>
+                    <li><strong>Sharpening:</strong> Center weight dominates, negative surroundings enhance contrast transitions.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODULE 2: Matrix & Padding Visualizer -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 2: Interactive 5×5 Image Matrix with 1-Pixel Border Padding</span>
+            <button class="btn" id="btnRandomizeMatrix">🎲 Randomize Image Grid</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted);">
+            Hover or click any cell in the <strong>5×5 Image Grid</strong> to see how boundary padding fills surrounding spatial neighbors during kernel calculation.
+        </p>
+
+        <div class="matrix-viz-container">
+            <div class="matrix-legend">
+                <div class="legend-item">
+                    <div class="legend-box" style="background: var(--padded-bg); border: 1px solid var(--padded-border);"></div>
+                    <span>Padded Boundary Cells</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: #1e293b; border: 1px solid var(--primary);"></div>
+                    <span>Active 3×3 Kernel Window</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: #1e293b; border: 1px solid var(--danger);"></div>
+                    <span>Target Output Pixel g(x,y)</span>
+                </div>
+            </div>
+
+            <div class="padded-grid-wrapper" id="paddedGrid">
+                <!-- 7x7 grid (5x5 image + 1-pixel padded ring) -->
+            </div>
+        </div>
+
+        <!-- Step-by-step Neighborhood Convolution Math -->
+        <div class="calc-simulation-box" id="calcSimBox">
+            <!-- Dynamic sum calculation renders here -->
+        </div>
+    </div>
+
+    <!-- MODULE 3: Image Filter Tester with Live Crosshair Inspector -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 3: Image Spatial Filtering & Real-Time Crosshair Neighborhood Inspector</span>
+        </div>
+        <div class="upload-controls">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">📁 Upload Image File</button>
+            <button class="btn" id="btnSamplePattern">🖼️ Load High-Contrast Edge Pattern</button>
+        </div>
+
+        <div class="image-compare-grid">
+            <div class="image-view">
+                <span>Original Source f(x,y) [Hover Crosshair]</span>
+                <canvas id="srcCanvas" class="img-canvas"></canvas>
+            </div>
+            <div class="image-view">
+                <span>Filtered Output g(x,y)</span>
+                <canvas id="dstCanvas" class="img-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="inspector-badge" id="imageInspectorBadge">
+            Move mouse or tap anywhere on the source image to inspect exact 3x3 pixel neighbors, padding values, and spatial convolution arithmetic.
+        </div>
+    </div>
+
+    <footer>
+        Spatial Filtering & Computer Vision Studio • Designed for Interactive Learning
+    </footer>
+</div>
+
+<script>
+    // --- PRESET KERNEL DEFINITIONS ---
+    const KERNEL_PRESETS = {
+        boxBlur: {
+            weights: [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+            divisor: 9,
+            bias: 0
+        },
+        gaussianBlur: {
+            weights: [[1, 2, 1], [2, 4, 2], [1, 2, 1]],
+            divisor: 16,
+            bias: 0
+        },
+        sharpen: {
+            weights: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]],
+            divisor: 1,
+            bias: 0
+        },
+        sobelX: {
+            weights: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]],
+            divisor: 1,
+            bias: 128
+        },
+        sobelY: {
+            weights: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]],
+            divisor: 1,
+            bias: 128
+        },
+        laplacian: {
+            weights: [[0, 1, 0], [1, -4, 1], [0, 1, 0]],
+            divisor: 1,
+            bias: 128
+        },
+        emboss: {
+            weights: [[-2, -1, 0], [-1, 1, 1], [0, 1, 2]],
+            divisor: 1,
+            bias: 0
+        },
+        identity: {
+            weights: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+            divisor: 1,
+            bias: 0
+        }
+    };
+
+    // --- GLOBAL APP STATE ---
+    let currentKernel = [[1, 1, 1], [1, 1, 1], [1, 1, 1]];
+    let currentDivisor = 9;
+    let currentBias = 0;
+    let currentPadding = 'zero';
+
+    // 5x5 Inner Image Grid Matrix
+    let imageMatrix = [
+        [40,  40,  40,  200, 200],
+        [40,  40,  40,  200, 200],
+        [40,  40,  80,  200, 200],
+        [200, 200, 200, 200, 200],
+        [200, 200, 200, 200, 200]
+    ];
+    let selectedImgRow = 2;
+    let selectedImgCol = 2;
+
+    // Canvas State
+    let currentImageData = null;
+    let imgW = 0, imgH = 0;
+    let lastTrackX = -1, lastTrackY = -1;
+
+    // Elements
+    const kernelSelect = document.getElementById('kernelSelect');
+    const paddingSelect = document.getElementById('paddingSelect');
+    const kernelDivisor = document.getElementById('kernelDivisor');
+    const kernelBias = document.getElementById('kernelBias');
+    const kernelMatrixGrid = document.getElementById('kernelMatrixGrid');
+    const paddedGrid = document.getElementById('paddedGrid');
+    const calcSimBox = document.getElementById('calcSimBox');
+    const srcCanvas = document.getElementById('srcCanvas');
+    const dstCanvas = document.getElementById('dstCanvas');
+    const ctxSrc = srcCanvas.getContext('2d');
+    const ctxDst = dstCanvas.getContext('2d');
+    const imageInspectorBadge = document.getElementById('imageInspectorBadge');
+
+    // --- PADDING HELPER FUNCTION ---
+    function getPixelValuePadded(matrix, row, col, padMode) {
+        const numRows = matrix.length;
+        const numCols = matrix[0].length;
+
+        if (row >= 0 && row < numRows && col >= 0 && col < numCols) {
+            return { val: matrix[row][col], isPadded: false };
+        }
+
+        let pr = row;
+        let pc = col;
+
+        if (padMode === 'zero') {
+            return { val: 0, isPadded: true };
+        } else if (padMode === 'clamp') {
+            pr = Math.max(0, Math.min(numRows - 1, row));
+            pc = Math.max(0, Math.min(numCols - 1, col));
+            return { val: matrix[pr][pc], isPadded: true };
+        } else if (padMode === 'reflect') {
+            if (row < 0) pr = Math.abs(row);
+            else if (row >= numRows) pr = 2 * numRows - row - 2;
+
+            if (col < 0) pc = Math.abs(col);
+            else if (col >= numCols) pc = 2 * numCols - col - 2;
+
+            pr = Math.max(0, Math.min(numRows - 1, pr));
+            pc = Math.max(0, Math.min(numCols - 1, pc));
+            return { val: matrix[pr][pc], isPadded: true };
+        }
+        return { val: 0, isPadded: true };
+    }
+
+    // --- 2D SPATIAL CONVOLUTION CALCULATION ---
+    function convolve3x3Neighborhood(neighborhood3x3, kernel, divisor, bias) {
+        let sum = 0;
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                sum += neighborhood3x3[r][c] * kernel[r][c];
+            }
+        }
+        let result = Math.round((sum / (divisor || 1)) + bias);
+        return Math.min(255, Math.max(0, result));
+    }
+
+    // --- RENDER MODULE 1: KERNEL INPUT MATRIX ---
+    function buildKernelGrid() {
+        kernelMatrixGrid.innerHTML = '';
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'kernel-cell';
+                input.value = currentKernel[r][c];
+                input.addEventListener('input', (e) => {
+                    currentKernel[r][c] = parseFloat(e.target.value) || 0;
+                    kernelSelect.value = 'custom';
+                    updateAllModules();
+                });
+                kernelMatrixGrid.appendChild(input);
+            }
+        }
+    }
+
+    function setKernelPreset(presetKey) {
+        if (KERNEL_PRESETS[presetKey]) {
+            const p = KERNEL_PRESETS[presetKey];
+            currentKernel = p.weights.map(row => [...row]);
+            currentDivisor = p.divisor;
+            currentBias = p.bias;
+
+            kernelDivisor.value = currentDivisor;
+            kernelBias.value = currentBias;
+            buildKernelGrid();
+            updateAllModules();
+        }
+    }
+
+    kernelSelect.addEventListener('change', (e) => setKernelPreset(e.target.value));
+    paddingSelect.addEventListener('change', (e) => {
+        currentPadding = e.target.value;
+        updateAllModules();
+    });
+
+    kernelDivisor.addEventListener('input', (e) => {
+        currentDivisor = parseFloat(e.target.value) || 1;
+        updateAllModules();
+    });
+
+    kernelBias.addEventListener('input', (e) => {
+        currentBias = parseFloat(e.target.value) || 0;
+        updateAllModules();
+    });
+
+    document.getElementById('btnNormalizeKernel').addEventListener('click', () => {
+        let sum = 0;
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) sum += currentKernel[r][c];
+        }
+        currentDivisor = sum !== 0 ? sum : 1;
+        kernelDivisor.value = currentDivisor;
+        updateAllModules();
+    });
+
+    // --- MODULE 2: MATRIX & PADDING VISUALIZER ---
+    function renderPaddedGrid() {
+        paddedGrid.innerHTML = '';
+
+        // 7x7 Grid: rows -1 to 5, cols -1 to 5
+        for (let r = -1; r <= 5; r++) {
+            for (let c = -1; c <= 5; c++) {
+                const pInfo = getPixelValuePadded(imageMatrix, r, c, currentPadding);
+                const cell = document.createElement('div');
+                cell.className = `grid-cell ${pInfo.isPadded ? 'padded' : ''}`;
+
+                // Check if inside target 3x3 kernel window
+                const inWindowR = (r >= selectedImgRow - 1 && r <= selectedImgRow + 1);
+                const inWindowC = (c >= selectedImgCol - 1 && c <= selectedImgCol + 1);
+
+                if (inWindowR && inWindowC) {
+                    cell.classList.add('in-window');
+                }
+                if (r === selectedImgRow && c === selectedImgCol) {
+                    cell.classList.add('center-cell');
+                }
+
+                cell.style.backgroundColor = pInfo.isPadded ? '' : `rgb(${pInfo.val},${pInfo.val},${pInfo.val})`;
+                cell.style.color = pInfo.isPadded ? 'var(--warning)' : (pInfo.val > 128 ? '#000' : '#fff');
+
+                const coordSpan = document.createElement('span');
+                coordSpan.className = 'cell-tag';
+                coordSpan.textContent = pInfo.isPadded ? 'PAD' : `(${r},${c})`;
+
+                const valSpan = document.createElement('span');
+                valSpan.textContent = pInfo.val;
+
+                cell.appendChild(coordSpan);
+                cell.appendChild(valSpan);
+
+                // Clicking inner image cells selects center pixel
+                if (!pInfo.isPadded) {
+                    cell.onclick = () => {
+                        selectedImgRow = r;
+                        selectedImgCol = c;
+                        renderPaddedGrid();
+                        updateCalculationSimulation();
+                    };
+                    cell.onmouseenter = () => {
+                        selectedImgRow = r;
+                        selectedImgCol = c;
+                        renderPaddedGrid();
+                        updateCalculationSimulation();
+                    };
+                }
+
+                paddedGrid.appendChild(cell);
+            }
+        }
+    }
+
+    function updateCalculationSimulation() {
+        let neighborhood = [];
+        let productTerms = [];
+        let rawSum = 0;
+
+        for (let kr = 0; kr < 3; kr++) {
+            let nRow = [];
+            for (let kc = 0; kc < 3; kc++) {
+                const imgR = selectedImgRow + (kr - 1);
+                const imgC = selectedImgCol + (kc - 1);
+                const pInfo = getPixelValuePadded(imageMatrix, imgR, imgC, currentPadding);
+                const w = currentKernel[kr][kc];
+                const prod = pInfo.val * w;
+
+                nRow.push(pInfo.val);
+                productTerms.push(`(${pInfo.val} × ${w})`);
+                rawSum += prod;
+            }
+            neighborhood.push(nRow);
+        }
+
+        const scaledSum = rawSum / (currentDivisor || 1);
+        const finalVal = convolve3x3Neighborhood(neighborhood, currentKernel, currentDivisor, currentBias);
+
+        calcSimBox.innerHTML = `
+            <div class="calc-step">
+                <strong>Target Pixel Location:</strong> (${selectedImgRow}, ${selectedImgCol}) | <strong>Padding Mode:</strong> <span class="hl-p">${currentPadding.toUpperCase()}</span>
+            </div>
+            <div class="calc-step">
+                <strong>Step 1 (Neighborhood × Kernel Sum):</strong>
+                ${productTerms.join(' + ')} = <span class="hl-k">${rawSum}</span>
+            </div>
+            <div class="calc-step">
+                <strong>Step 2 (Divide & Add Bias Offset):</strong>
+                (${rawSum} / ${currentDivisor}) + ${currentBias} = ${scaledSum.toFixed(2)} + ${currentBias} = ${(scaledSum + currentBias).toFixed(2)}
+            </div>
+            <div class="calc-step">
+                <strong>Step 3 (8-bit Quantize & Clamp):</strong>
+                Clamp( ${(scaledSum + currentBias).toFixed(2)} ) ➔ Output Intensity g(${selectedImgRow}, ${selectedImgCol}) = <span class="hl-res">${finalVal}</span>
+            </div>
+        `;
+    }
+
+    document.getElementById('btnRandomizeMatrix').addEventListener('click', () => {
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                imageMatrix[r][c] = Math.floor(Math.random() * 256);
+            }
+        }
+        renderPaddedGrid();
+        updateCalculationSimulation();
+    });
+
+    // --- MODULE 3: IMAGE CANVAS CONVOLUTION & INSPECTOR ---
+    function applyImageConvolution() {
+        if (!currentImageData) return;
+
+        const srcData = currentImageData.data;
+        const dstImgData = ctxDst.createImageData(imgW, imgH);
+        const dstData = dstImgData.data;
+
+        // Grayscale source cache for fast convolution lookup
+        const grayCache = new Uint8ClampedArray(imgW * imgH);
+        for (let i = 0; i < srcData.length; i += 4) {
+            grayCache[i / 4] = Math.round(0.299 * srcData[i] + 0.587 * srcData[i+1] + 0.114 * srcData[i+2]);
+        }
+
+        // Helper for image padded pixel retrieval
+        function getImgPixel(x, y) {
+            if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
+                return grayCache[y * imgW + x];
+            }
+            if (currentPadding === 'zero') return 0;
+            
+            let px = x, py = y;
+            if (currentPadding === 'clamp') {
+                px = Math.max(0, Math.min(imgW - 1, x));
+                py = Math.max(0, Math.min(imgH - 1, y));
+            } else if (currentPadding === 'reflect') {
+                if (x < 0) px = Math.abs(x);
+                else if (x >= imgW) px = 2 * imgW - x - 2;
+                if (y < 0) py = Math.abs(y);
+                else if (y >= imgH) py = 2 * imgH - y - 2;
+                px = Math.max(0, Math.min(imgW - 1, px));
+                py = Math.max(0, Math.min(imgH - 1, py));
+            }
+            return grayCache[py * imgW + px];
+        }
+
+        // Apply 2D spatial convolution across all pixels
+        for (let y = 0; y < imgH; y++) {
+            for (let x = 0; x < imgW; x++) {
+                let sum = 0;
+                for (let kr = 0; kr < 3; kr++) {
+                    for (let kc = 0; kc < 3; kc++) {
+                        const px = x + (kc - 1);
+                        const py = y + (kr - 1);
+                        sum += getImgPixel(px, py) * currentKernel[kr][kc];
+                    }
+                }
+
+                let res = Math.round((sum / (currentDivisor || 1)) + currentBias);
+                res = Math.min(255, Math.max(0, res));
+
+                const idx = (y * imgW + x) * 4;
+                dstData[idx] = res;
+                dstData[idx+1] = res;
+                dstData[idx+2] = res;
+                dstData[idx+3] = 255;
+            }
+        }
+
+        ctxDst.putImageData(dstImgData, 0, 0);
+
+        if (lastTrackX >= 0 && lastTrackY >= 0) {
+            updateImageCrosshair(lastTrackX, lastTrackY);
+        }
+    }
+
+    function drawCrosshair(ctx, x, y, width, height) {
+        ctx.save();
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, height);
+        ctx.stroke();
+
+        // Horizontal line
+        ctx.beginPath();
+        ctx.moveTo(0, y); ctx.lineTo(width, y);
+        ctx.stroke();
+
+        // Circle marker
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function updateImageCrosshair(x, y) {
+        if (!currentImageData) return;
+        lastTrackX = x;
+        lastTrackY = y;
+
+        // Redraw source image with overlay
+        ctxSrc.putImageData(currentImageData, 0, 0);
+        drawCrosshair(ctxSrc, x, y, imgW, imgH);
+
+        // Get local neighborhood around crosshair
+        const src = currentImageData.data;
+        function getVal(px, py) {
+            if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+                const idx = (py * imgW + px) * 4;
+                return Math.round(0.299 * src[idx] + 0.587 * src[idx+1] + 0.114 * src[idx+2]);
+            }
+            if (currentPadding === 'zero') return 0;
+            let rx = px, ry = py;
+            if (currentPadding === 'clamp') {
+                rx = Math.max(0, Math.min(imgW - 1, px));
+                ry = Math.max(0, Math.min(imgH - 1, py));
+            } else if (currentPadding === 'reflect') {
+                if (px < 0) rx = Math.abs(px);
+                else if (px >= imgW) rx = 2 * imgW - px - 2;
+                if (py < 0) ry = Math.abs(py);
+                else if (py >= imgH) ry = 2 * imgH - py - 2;
+                rx = Math.max(0, Math.min(imgW - 1, rx));
+                ry = Math.max(0, Math.min(imgH - 1, ry));
+            }
+            const idx = (ry * imgW + rx) * 4;
+            return Math.round(0.299 * src[idx] + 0.587 * src[idx+1] + 0.114 * src[idx+2]);
+        }
+
+        let nSum = 0;
+        let nMatrixStr = [];
+        for (let kr = 0; kr < 3; kr++) {
+            let rowVals = [];
+            for (let kc = 0; kc < 3; kc++) {
+                const v = getVal(x + (kc - 1), y + (kr - 1));
+                rowVals.push(v);
+                nSum += v * currentKernel[kr][kc];
+            }
+            nMatrixStr.push(`[${rowVals.join(', ')}]`);
+        }
+
+        const outVal = Math.min(255, Math.max(0, Math.round((nSum / (currentDivisor || 1)) + currentBias)));
+
+        imageInspectorBadge.innerHTML = `
+            <strong>Crosshair Tracker at (${x}, ${y}):</strong> 3×3 Neighborhood = ${nMatrixStr.join(' ')} | Padding: <span class="hl-p">${currentPadding.toUpperCase()}</span> ➔ Spatial Convolution Output g(${x},${y}) = <span class="hl-res">${outVal}</span>
+        `;
+    }
+
+    srcCanvas.addEventListener('pointermove', (e) => {
+        if (!currentImageData) return;
+        const rect = srcCanvas.getBoundingClientRect();
+        const clickX = Math.floor(((e.clientX - rect.left) / rect.width) * imgW);
+        const clickY = Math.floor(((e.clientY - rect.top) / rect.height) * imgH);
+        if (clickX >= 0 && clickX < imgW && clickY >= 0 && clickY < imgH) {
+            updateImageCrosshair(clickX, clickY);
+        }
+    });
+
+    function loadSamplePattern() {
+        imgW = 200;
+        imgH = 150;
+        srcCanvas.width = imgW;
+        srcCanvas.height = imgH;
+        dstCanvas.width = imgW;
+        dstCanvas.height = imgH;
+
+        const imgData = ctxSrc.createImageData(imgW, imgH);
+        for (let y = 0; y < imgH; y++) {
+            for (let x = 0; x < imgW; x++) {
+                const idx = (y * imgW + x) * 4;
+                // High contrast sharp geometric pattern (stripes & blocks)
+                let val = (x < 100) ? (y % 20 < 10 ? 30 : 220) : (x % 30 < 15 ? 40 : 200);
+
+                imgData.data[idx] = val;
+                imgData.data[idx+1] = val;
+                imgData.data[idx+2] = val;
+                imgData.data[idx+3] = 255;
+            }
+        }
+        ctxSrc.putImageData(imgData, 0, 0);
+        currentImageData = ctxSrc.getImageData(0, 0, imgW, imgH);
+        applyImageConvolution();
+        updateImageCrosshair(100, 75);
+    }
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 300;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+
+                imgW = w;
+                imgH = h;
+                srcCanvas.width = w;
+                srcCanvas.height = h;
+                dstCanvas.width = w;
+                dstCanvas.height = h;
+
+                ctxSrc.drawImage(img, 0, 0, w, h);
+                currentImageData = ctxSrc.getImageData(0, 0, w, h);
+                applyImageConvolution();
+                updateImageCrosshair(Math.floor(w/2), Math.floor(h/2));
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('btnSamplePattern').addEventListener('click', loadSamplePattern);
+
+    function updateAllModules() {
+        renderPaddedGrid();
+        updateCalculationSimulation();
+        applyImageConvolution();
+    }
+
+    // --- INITIALIZATION ---
+    setKernelPreset('boxBlur');
+    loadSamplePattern();
+</script>
+</body>
+</html>

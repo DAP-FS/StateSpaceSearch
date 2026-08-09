@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3×3 Spatial Filter - Padding & Convolution</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            padding: 12px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        /* Header */
+        .header { text-align: center; padding: 12px 8px 16px; }
+        .header h1 { font-size: clamp(20px, 4vw, 28px); font-weight: 800; color: #0f172a; line-height: 1.2; }
+        .header p { font-size: clamp(12px, 2.5vw, 14px); color: #64748b; margin-top: 6px; }
+
+        /* Responsive layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        @media (min-width: 1024px) {
+            .main-layout { grid-template-columns: 300px 1fr; gap: 18px; }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .icon {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 14px 0 8px;
+        }
+
+        /* Buttons */
+        .btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
+        .btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            flex: 1;
+            min-width: 90px;
+            text-align: center;
+        }
+        .btn:hover { border-color: #6366f1; color: #4f46e5; }
+        .btn.active {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white; border-color: transparent;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
+        .btn-lg { padding: 10px 18px; font-size: 13px; }
+
+        /* 3x3 kernel grid */
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(44px, 1fr));
+            gap: 4px;
+            max-width: 170px;
+            margin: 0 auto;
+        }
+        .cell-3 {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(11px, 2.2vw, 14px);
+            font-weight: 600;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            min-height: 40px;
+        }
+        .cell-3.pos { background: #fef3c7; color: #92400e; border-color: #fbbf24; }
+        .cell-3.neg { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .cell-3.zero { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
+        .cell-3.center { background: linear-gradient(135deg, #fef3c7, #fde68a); box-shadow: 0 2px 8px rgba(251,191,36,0.3); }
+        .cell-3.matched { background: linear-gradient(135deg, #c7d2fe, #a5b4fc); color: #312e81; border-color: #6366f1; transform: scale(1.08); }
+
+        /* 7x7 padded grid */
+        .grid-7x7 {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(32px, 1fr));
+            gap: 3px;
+            max-width: 290px;
+            margin: 0 auto;
+            padding: 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .cell-7 {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(8px, 1.6vw, 11px);
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #64748b;
+            transition: all 0.3s ease;
+            min-height: 28px;
+        }
+        .cell-7.real { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border-color: #3b82f6; }
+        .cell-7.pad-zero { background: #fee2e2; color: #991b1b; border-style: dashed; border-color: #fca5a5; }
+        .cell-7.pad-rep { background: #fef3c7; color: #92400e; border-style: dashed; border-color: #fbbf24; }
+        .cell-7.focus { background: linear-gradient(135deg, #c7d2fe, #a5b4fc); color: #312e81; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); transform: scale(1.15); z-index: 2; }
+
+        /* 5x5 output */
+        .grid-5x5 {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(36px, 1fr));
+            gap: 3px;
+            max-width: 210px;
+            margin: 0 auto;
+            padding: 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        .cell-out {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(9px, 1.8vw, 11px);
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #94a3b8;
+            transition: all 0.3s ease;
+            min-height: 32px;
+        }
+        .cell-out.filled { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border-color: #3b82f6; animation: popIn 0.4s ease; }
+        .cell-out.current { box-shadow: 0 0 0 3px rgba(59,130,246,0.3); }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+
+        /* Math box */
+        .math-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(10px, 1.8vw, 12px);
+            line-height: 1.8;
+            min-height: 100px;
+            overflow-x: auto;
+        }
+        .math-box .num { color: #6ee7b7; }
+        .math-box .op { color: #f472b6; }
+        .math-box .eq { color: #fbbf24; font-weight: 600; }
+        .math-box .res { color: #a5b4fc; font-weight: 700; }
+
+        /* Demo image area */
+        .demo-area {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border: 2px dashed #7dd3fc;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .demo-area:hover { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #38bdf8; }
+        .demo-area.has-image { border-style: solid; border-color: #e2e8f0; background: #f8fafc; padding: 8px; }
+        .demo-canvas { max-width: 100%; border-radius: 8px; display: block; margin: 0 auto; }
+
+        /* Image comparison */
+        .img-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        @media (max-width: 480px) { .img-compare { grid-template-columns: 1fr; } }
+
+        .img-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .img-box-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        /* Progress bar */
+        .progress-bar { display: flex; gap: 2px; margin-top: 12px; }
+        .p-dot { flex: 1; height: 4px; border-radius: 2px; background: #e2e8f0; transition: all 0.3s; }
+        .p-dot.done { background: #86efac; }
+        .p-dot.active { background: linear-gradient(90deg, #6366f1, #4f46e5); }
+
+        /* Legend */
+        .legend { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 4px; border: 1px solid; }
+
+        /* Info text */
+        .info-text {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.7;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #6366f1;
+            margin: 10px 0;
+        }
+
+        /* Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
+
+        .summary-cell { background: #f8fafc; padding: 12px; border-radius: 10px; text-align: center; }
+        .summary-label { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+        .summary-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; }
+        .summary-value.blue { color: #1e40af; }
+        .summary-value.green { color: #166534; }
+        .summary-value.orange { color: #92400e; }
+
+        .arrow { font-size: 22px; color: #94a3b8; text-align: center; margin: 4px 0; }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .controls .btn { flex: 1; min-width: 80px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 3×3 Spatial Filter with Padding</h1>
+            <p>Visualize how a 5×5 image becomes 7×7 with padding, then gets filtered</p>
+        </div>
+
+        <div class="main-layout">
+            <!-- LEFT SIDEBAR -->
+            <div>
+                <!-- Kernel -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #dbeafe;">🎛️</div>
+                        Filter Kernel
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn active" data-k="box">Box Blur</button>
+                        <button class="btn" data-k="gaussian">Gaussian</button>
+                        <button class="btn" data-k="laplacian">Sharpen</button>
+                        <button class="btn" data-k="sobel">Sobel X</button>
+                    </div>
+                    <div class="section-label">Kernel Weights</div>
+                    <div class="grid-3x3" id="kernelGrid"></div>
+                    <div class="info-text" id="kernelDesc" style="font-size: 12px; margin-top: 10px;">
+                        Averages all 9 neighbors equally. Each weight = 1/9.
+                    </div>
+                </div>
+
+                <!-- Demo Image -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fef3c7;">🖼️</div>
+                        Demo Image
+                    </div>
+                    <div class="demo-area" id="demoArea">
+                        <div id="demoPlaceholder">
+                            <div style="font-size: 32px; margin-bottom: 8px;">🎨</div>
+                            <div style="font-size: 13px; font-weight: 600; color: #0369a1;">Click to Generate Demo</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Creates a 5×5 test pattern</div>
+                        </div>
+                        <canvas id="demoCanvas" class="demo-canvas" style="display: none;"></canvas>
+                    </div>
+                    <div class="img-compare" id="imgCompare" style="display: none;">
+                        <div class="img-box">
+                            <div class="img-box-label">Original</div>
+                            <canvas id="origCanvas" class="demo-canvas"></canvas>
+                        </div>
+                        <div class="img-box">
+                            <div class="img-box-label">Filtered</div>
+                            <canvas id="filteredCanvas" class="demo-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fce7f3;">⚙️</div>
+                        Settings
+                    </div>
+                    <div class="section-label">Padding Mode</div>
+                    <div class="btn-group">
+                        <button class="btn active" data-pad="zero">Zero (0)</button>
+                        <button class="btn" data-pad="replicate">Replicate</button>
+                    </div>
+                    <div class="section-label">Animation</div>
+                    <div class="controls">
+                        <button class="btn btn-primary btn-lg" id="btnStart">▶ Start</button>
+                        <button class="btn btn-lg" id="btnNext">Step →</button>
+                        <button class="btn btn-lg" id="btnReset">↺ Reset</button>
+                    </div>
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Visualization -->
+            <div>
+                <!-- Padded Grid -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #dcfce7;">📐</div>
+                        Padded Input (7×7)
+                    </div>
+                    <div class="grid-7x7" id="paddedGrid"></div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-color: #3b82f6;"></div>
+                            <span>Real pixels</span>
+                        </div>
+                        <div class="legend-item" id="legendZero">
+                            <div class="legend-dot" style="background: #fee2e2; border-color: #fca5a5; border-style: dashed;"></div>
+                            <span>Zero padding</span>
+                        </div>
+                        <div class="legend-item" id="legendRep" style="display: none;">
+                            <div class="legend-dot" style="background: #fef3c7; border-color: #fbbf24; border-style: dashed;"></div>
+                            <span>Replicated</span>
+                        </div>
+                    </div>
+                    <div class="info-text" id="padInfo">
+                        <strong>5×5 image</strong> + <strong>1-pixel zero border</strong> = <strong>7×7 grid</strong>. Dashed cells = 0 (black).
+                    </div>
+                </div>
+
+                <!-- Walkthrough -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fef3c7;">🔎</div>
+                        Convolution Walkthrough
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
+                        <div style="text-align: center;">
+                            <div class="section-label" style="margin-top: 0;">3×3 Window</div>
+                            <div class="grid-3x3" id="windowGrid"></div>
+                        </div>
+                        <div style="display: flex; align-items: center; padding-top: 30px;">
+                            <div class="arrow">×</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div class="section-label" style="margin-top: 0;">Filter</div>
+                            <div class="grid-3x3" id="animKernelGrid"></div>
+                        </div>
+                        <div style="display: flex; align-items: center; padding-top: 30px;">
+                            <div class="arrow">=</div>
+                        </div>
+                        <div style="min-width: 180px; max-width: 280px; flex: 1;">
+                            <div class="section-label" style="margin-top: 0;">Calculation</div>
+                            <div class="math-box" id="calcBox">
+                                <span class="res">Press Start to see the math!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #dbeafe;">📤</div>
+                        Output Image (5×5)
+                    </div>
+                    <div class="grid-5x5" id="outputGrid"></div>
+                    <div class="summary-grid">
+                        <div class="summary-cell">
+                            <div class="summary-label">Input Size</div>
+                            <div class="summary-value blue">5 × 5</div>
+                        </div>
+                        <div class="summary-cell">
+                            <div class="summary-label">Padding</div>
+                            <div class="summary-value orange">+1 each side</div>
+                        </div>
+                        <div class="summary-cell">
+                            <div class="summary-label">Padded Size</div>
+                            <div class="summary-value green">7 × 7</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const KERNELS = {
+            box: { w: [[1,1,1],[1,1,1],[1,1,1]], factor: 1/9, desc: 'Averages all 9 neighbors equally. Each weight = 1/9.' },
+            gaussian: { w: [[1,2,1],[2,4,2],[1,2,1]], factor: 1/16, desc: 'Center matters most (4/16), edges less (2/16), corners least (1/16).' },
+            laplacian: { w: [[0,-1,0],[-1,5,-1],[0,-1,0]], factor: 1, desc: 'Boosts center (+5), subtracts neighbors (-1). Sharpens edges!' },
+            sobel: { w: [[-1,0,1],[-2,0,2],[-1,0,1]], factor: 1, desc: 'Left negative, right positive. Detects vertical edges.' }
+        };
+
+        // Default pattern
+        const defaultImg = [
+            [10, 30, 50, 70, 90],
+            [30, 50, 70, 90, 110],
+            [50, 70, 90, 110, 130],
+            [70, 90, 110, 130, 150],
+            [90, 110, 130, 150, 170]
+        ];
+
+        let demoImg = null;
+        let useDemo = false;
+        let currentK = 'box';
+        let paddingMode = 'zero';
+        let step = 0;
+        let isAnimating = false;
+        let timer = null;
+        const totalSteps = 25;
+
+        function getK(r, c) { return KERNELS[currentK].w[r][c] * KERNELS[currentK].factor; }
+
+        function getPixel(r, c) {
+            const img = useDemo ? demoImg : defaultImg;
+            if (r >= 0 && r < 5 && c >= 0 && c < 5) return img[r][c];
+            if (paddingMode === 'zero') return 0;
+            const cr = Math.max(0, Math.min(4, r));
+            const cc = Math.max(0, Math.min(4, c));
+            return img[cr][cc];
+        }
+
+        function renderKernel() {
+            const g = document.getElementById('kernelGrid');
+            g.innerHTML = '';
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const v = getK(r, c);
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-3';
+                    if (v > 0) cell.classList.add('pos');
+                    else if (v < 0) cell.classList.add('neg');
+                    else cell.classList.add('zero');
+                    if (r === 1 && c === 1) cell.classList.add('center');
+                    cell.textContent = v === 0 ? '0' : (v === Math.floor(v) ? v.toString() : v.toFixed(2));
+                    g.appendChild(cell);
+                }
+            }
+            document.getElementById('kernelDesc').textContent = KERNELS[currentK].desc;
+        }
+
+        function renderPadded() {
+            const g = document.getElementById('paddedGrid');
+            g.innerHTML = '';
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    const cell = document.createElement('div');
+                    const val = getPixel(r - 1, c - 1);
+                    const isReal = (r >= 1 && r <= 5 && c >= 1 && c <= 5);
+                    cell.className = 'cell-7';
+                    cell.id = `pad-${r}-${c}`;
+                    if (isReal) cell.classList.add('real');
+                    else if (paddingMode === 'zero') cell.classList.add('pad-zero');
+                    else cell.classList.add('pad-rep');
+                    cell.textContent = val;
+                    g.appendChild(cell);
+                }
+            }
+        }
+
+        function renderOutput() {
+            const g = document.getElementById('outputGrid');
+            g.innerHTML = '';
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-out';
+                    cell.id = `out-${r}-${c}`;
+                    cell.textContent = '?';
+                    g.appendChild(cell);
+                }
+            }
+        }
+
+        function renderWindow() {
+            const g = document.getElementById('windowGrid');
+            g.innerHTML = '';
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-3 image-cell';
+                    cell.id = `win-${r}-${c}`;
+                    cell.textContent = '·';
+                    g.appendChild(cell);
+                }
+            }
+        }
+
+        function renderAnimKernel() {
+            const g = document.getElementById('animKernelGrid');
+            g.innerHTML = '';
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const v = getK(r, c);
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-3';
+                    cell.id = `ak-${r}-${c}`;
+                    if (v > 0) cell.classList.add('pos');
+                    else if (v < 0) cell.classList.add('neg');
+                    else cell.classList.add('zero');
+                    if (r === 1 && c === 1) cell.classList.add('center');
+                    cell.textContent = v === 0 ? '0' : (v === Math.floor(v) ? v.toString() : v.toFixed(2));
+                    g.appendChild(cell);
+                }
+            }
+        }
+
+        function renderProgress() {
+            const bar = document.getElementById('progressBar');
+            bar.innerHTML = '';
+            for (let i = 0; i < totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'p-dot' + (i < step ? ' done' : (i === step ? ' active' : ''));
+                bar.appendChild(dot);
+            }
+        }
+
+        // ===== DEMO IMAGE =====
+        function generateDemo() {
+            useDemo = true;
+            demoImg = [];
+            for (let r = 0; r < 5; r++) {
+                const row = [];
+                for (let c = 0; c < 5; c++) {
+                    const dist = Math.abs(r - 2) + Math.abs(c - 2);
+                    row.push(Math.max(10, 160 - dist * 35 + Math.floor(Math.random() * 20)));
+                }
+                demoImg.push(row);
+            }
+
+            const canvas = document.getElementById('demoCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 250; canvas.height = 250;
+
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const val = demoImg[r][c];
+                    ctx.fillStyle = `rgb(${val},${val},${val})`;
+                    ctx.fillRect(c * 50, r * 50, 50, 50);
+                    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+                    ctx.strokeRect(c * 50, r * 50, 50, 50);
+                }
+            }
+
+            document.getElementById('demoPlaceholder').style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('demoArea').classList.add('has-image');
+            drawComparison();
+            document.getElementById('imgCompare').style.display = 'grid';
+            resetAll();
+        }
+
+        function drawComparison() {
+            const img = useDemo ? demoImg : defaultImg;
+
+            const orig = document.getElementById('origCanvas');
+            const octx = orig.getContext('2d');
+            orig.width = 200; orig.height = 200;
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const v = img[r][c];
+                    octx.fillStyle = `rgb(${v},${v},${v})`;
+                    octx.fillRect(c * 40, r * 40, 40, 40);
+                }
+            }
+
+            const filt = document.getElementById('filteredCanvas');
+            const fctx = filt.getContext('2d');
+            filt.width = 200; filt.height = 200;
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    let sum = 0;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            sum += getPixel(r + dr, c + dc) * getK(dr + 1, dc + 1);
+                        }
+                    }
+                    const result = Math.min(255, Math.max(0, Math.round(sum)));
+                    fctx.fillStyle = `rgb(${result},${result},${result})`;
+                    fctx.fillRect(c * 40, r * 40, 40, 40);
+                }
+            }
+        }
+
+        // ===== ANIMATION =====
+        function computeStep(s) {
+            const outR = Math.floor(s / 5);
+            const outC = s % 5;
+            const padR = outR + 1;
+            const padC = outC + 1;
+
+            document.querySelectorAll('.cell-7.focus').forEach(el => el.classList.remove('focus'));
+            document.querySelectorAll('.cell-out.current').forEach(el => el.classList.remove('current'));
+
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const cell = document.getElementById(`pad-${padR + dr}-${padC + dc}`);
+                    if (cell) cell.classList.add('focus');
+                }
+            }
+
+            let terms = [], sum = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const z = getPixel(outR + dr, outC + dc);
+                    const w = getK(dr + 1, dc + 1);
+                    sum += z * w;
+
+                    document.getElementById(`win-${dr+1}-${dc+1}`).textContent = z;
+                    document.getElementById(`win-${dr+1}-${dc+1}`).classList.add('matched');
+                    document.getElementById(`ak-${dr+1}-${dc+1}`).classList.add('matched');
+
+                    if (w !== 0) {
+                        terms.push(`<span class="num">${w === Math.floor(w) ? w : w.toFixed(2)}</span><span class="op">×</span><span class="num">${z}</span>`);
+                    }
+                }
+            }
+
+            const result = Math.min(255, Math.max(0, Math.round(sum)));
+            document.getElementById('calcBox').innerHTML = `
+                <div>
+                    <div style="margin-bottom:6px; font-size:11px; color:#94a3b8;">Position [${outR}, ${outC}]</div>
+                    <div style="font-size:11px; line-height:1.9;">${terms.join(' <span class="op">+</span> ')}</div>
+                    <div style="margin-top:6px; border-top:1px solid #334155; padding-top:6px;">
+                        <span class="eq">Sum = ${sum.toFixed(1)}</span><span class="op"> → </span><span class="res">${result}</span>
+                    </div>
+                </div>`;
+
+            const outCell = document.getElementById(`out-${outR}-${outC}`);
+            outCell.textContent = result;
+            outCell.classList.add('filled');
+            outCell.classList.add('current');
+
+            setTimeout(() => {
+                document.querySelectorAll('.cell-3.matched').forEach(el => el.classList.remove('matched'));
+            }, 400);
+        }
+
+        function nextStep() {
+            if (step >= totalSteps) {
+                stopAnim();
+                document.getElementById('calcBox').innerHTML = '<span class="res">✅ All 25 pixels done!</span>';
+                return;
+            }
+            computeStep(step);
+            step++;
+            renderProgress();
+        }
+
+        function startAnim() {
+            if (step >= totalSteps) step = 0;
+            isAnimating = true;
+            document.getElementById('btnStart').textContent = '⏸ Pause';
+            document.getElementById('btnStart').classList.add('active');
+            function loop() {
+                if (!isAnimating || step >= totalSteps) { stopAnim(); return; }
+                nextStep();
+                timer = setTimeout(loop, 600);
+            }
+            loop();
+        }
+
+        function stopAnim() {
+            isAnimating = false;
+            document.getElementById('btnStart').textContent = step >= totalSteps ? '▶ Restart' : '▶ Resume';
+            document.getElementById('btnStart').classList.remove('active');
+            if (timer) clearTimeout(timer);
+        }
+
+        function resetAll() {
+            stopAnim(); step = 0;
+            renderProgress(); renderPadded(); renderOutput();
+            renderWindow(); renderAnimKernel();
+            document.getElementById('calcBox').innerHTML = '<span class="res">Press Start to see the math!</span>';
+            document.getElementById('btnStart').textContent = '▶ Start';
+            document.getElementById('btnStart').classList.remove('active');
+        }
+
+        // ===== EVENTS =====
+        document.querySelectorAll('[data-k]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-k]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentK = btn.dataset.k;
+                renderKernel(); renderAnimKernel();
+                if (useDemo) drawComparison();
+                resetAll();
+            });
+        });
+
+        document.querySelectorAll('[data-pad]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-pad]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                paddingMode = btn.dataset.pad;
+                document.getElementById('legendZero').style.display = paddingMode === 'zero' ? 'flex' : 'none';
+                document.getElementById('legendRep').style.display = paddingMode === 'replicate' ? 'flex' : 'none';
+                document.getElementById('padInfo').innerHTML = paddingMode === 'zero'
+                    ? '<strong>5×5 image</strong> + <strong>1-pixel zero border</strong> = <strong>7×7 grid</strong>. Dashed cells = 0 (black).'
+                    : '<strong>5×5 image</strong> + <strong>1-pixel replicated border</strong> = <strong>7×7 grid</strong>. Dashed cells copy nearest edge.';
+                if (useDemo) drawComparison();
+                resetAll();
+            });
+        });
+
+        document.getElementById('btnStart').addEventListener('click', () => isAnimating ? stopAnim() : startAnim());
+        document.getElementById('btnNext').addEventListener('click', () => { stopAnim(); nextStep(); });
+        document.getElementById('btnReset').addEventListener('click', resetAll);
+        document.getElementById('demoArea').addEventListener('click', generateDemo);
+
+        // ===== INIT =====
+        renderKernel(); renderPadded(); renderOutput();
+        renderWindow(); renderAnimKernel(); renderProgress();
+    })();
+    </script>
+</body>
+</html>

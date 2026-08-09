@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intensity Transformations — Log, Gamma, Contrast Stretch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .main-title {
+            font-size: 24px; font-weight: 700; color: #1a1a2e;
+            text-align: center; margin-bottom: 4px;
+        }
+        .main-subtitle {
+            font-size: 14px; color: #6b7280;
+            text-align: center; margin-bottom: 24px;
+        }
+        .tabs {
+            display: flex; gap: 4px; background: #f1f5f9;
+            padding: 4px; border-radius: 12px; margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1; padding: 10px 16px; border: none; background: transparent;
+            border-radius: 10px; font-size: 13px; font-weight: 600;
+            color: #64748b; cursor: pointer; transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .tab.active {
+            background: white; color: #1e293b;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .tab:hover:not(.active) { color: #475569; }
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .split-layout {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        @media (max-width: 768px) { .split-layout { grid-template-columns: 1fr; } }
+        .card {
+            background: white; border: 1px solid #e2e8f0;
+            border-radius: 14px; padding: 20px;
+        }
+        .card-title {
+            font-size: 14px; font-weight: 600; color: #1e293b;
+            margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .card-title .icon {
+            width: 28px; height: 28px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+        }
+        .formula-box {
+            background: #0f172a; color: #e2e8f0;
+            padding: 14px 18px; border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px; line-height: 1.7; margin-bottom: 16px;
+            overflow-x: auto;
+        }
+        .formula-box .var { color: #fbbf24; }
+        .formula-box .const { color: #a5b4fc; }
+        .formula-box .op { color: #f472b6; }
+        .formula-box .func { color: #6ee7b7; }
+        .slider-group { margin-bottom: 16px; }
+        .slider-label {
+            display: flex; justify-content: space-between;
+            font-size: 12px; font-weight: 600; color: #475569;
+            margin-bottom: 6px;
+        }
+        .slider-value { color: #6366f1; font-family: 'JetBrains Mono', monospace; }
+        input[type="range"] {
+            width: 100%; height: 6px; border-radius: 3px;
+            background: #e2e8f0; outline: none;
+            -webkit-appearance: none; appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            cursor: pointer; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+            transition: transform 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .canvas-container {
+            background: #f8fafc; border-radius: 10px; padding: 12px;
+            display: flex; justify-content: center;
+        }
+        canvas { border-radius: 8px; max-width: 100%; }
+        .image-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;
+        }
+        .image-card {
+            background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center;
+        }
+        .image-card-label {
+            font-size: 11px; font-weight: 600; color: #64748b;
+            margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .upload-area {
+            border: 2px dashed #cbd5e1; border-radius: 12px; padding: 32px;
+            text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px;
+        }
+        .upload-area:hover { border-color: #6366f1; background: #f5f3ff; }
+        .upload-area.has-image { border-style: solid; border-color: #e2e8f0; padding: 12px; }
+        .upload-text { font-size: 13px; color: #64748b; }
+        .upload-text strong { color: #4f46e5; }
+        .btn {
+            padding: 8px 18px; border-radius: 8px; border: none;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5); color: white;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .info-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 600; margin-top: 8px;
+        }
+        .badge-log { background: #dbeafe; color: #1e40af; }
+        .badge-gamma { background: #fce7f3; color: #9d174d; }
+        .badge-stretch { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-title">Intensity Transformation Functions</div>
+        <div class="main-subtitle">Interactive visualization of Log, Power-Law (Gamma), and Contrast Stretching</div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="log">Log Transform</button>
+            <button class="tab" data-tab="gamma">Power-Law (Gamma)</button>
+            <button class="tab" data-tab="stretch">Contrast Stretch</button>
+        </div>
+
+        <!-- LOG TRANSFORM -->
+        <div class="panel active" id="panel-log">
+            <div class="split-layout">
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #dbeafe;">📐</div>
+                        Logarithmic Transformation
+                    </div>
+                    <div class="formula-box">
+                        <span class="var">s</span> <span class="op">=</span> <span class="const">c</span> <span class="op">×</span> <span class="func">log</span><span class="op">(</span><span class="const">1</span> <span class="op">+</span> <span class="var">r</span><span class="op">)</span>
+                    </div>
+                    <div class="info-badge badge-log">Expands low intensities • Compresses high</div>
+                    <div class="slider-group" style="margin-top: 16px;">
+                        <div class="slider-label">
+                            <span>Constant c</span>
+                            <span class="slider-value" id="log-c-val">Auto</span>
+                        </div>
+                        <input type="range" id="log-c" min="1" max="500" value="0" step="1">
+                        <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Set to 0 for auto-scaling to [0,255]</div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="log-curve" width="360" height="280"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fef3c7;">🖼️</div>
+                        Image Processor
+                    </div>
+                    <div class="upload-area" id="log-upload">
+                        <div class="upload-text">
+                            <strong>Click to upload</strong> or drag an image<br>
+                            <span style="font-size: 11px; color: #94a3b8;">JPG, PNG supported</span>
+                        </div>
+                        <input type="file" id="log-file" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="image-grid" id="log-images" style="display: none;">
+                        <div class="image-card">
+                            <div class="image-card-label">Original</div>
+                            <canvas id="log-orig" width="180" height="180"></canvas>
+                        </div>
+                        <div class="image-card">
+                            <div class="image-card-label">Log Transformed</div>
+                            <canvas id="log-result" width="180" height="180"></canvas>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+                        <button class="btn btn-secondary" id="log-demo">Use Demo Image</button>
+                        <button class="btn btn-secondary" id="log-clear">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAMMA TRANSFORM -->
+        <div class="panel" id="panel-gamma">
+            <div class="split-layout">
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fce7f3;">📐</div>
+                        Power-Law (Gamma) Transformation
+                    </div>
+                    <div class="formula-box">
+                        <span class="var">s</span> <span class="op">=</span> <span class="const">c</span> <span class="op">×</span> <span class="var">r</span><span class="op">^</span><span class="const">γ</span>
+                    </div>
+                    <div class="info-badge badge-gamma">γ < 1: brighten shadows • γ > 1: darken highlights</div>
+                    <div class="slider-group" style="margin-top: 16px;">
+                        <div class="slider-label">
+                            <span>Gamma (γ)</span>
+                            <span class="slider-value" id="gamma-val">1.00</span>
+                        </div>
+                        <input type="range" id="gamma-slider" min="10" max="500" value="100" step="5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Constant c</span>
+                            <span class="slider-value" id="gamma-c-val">1.0</span>
+                        </div>
+                        <input type="range" id="gamma-c" min="50" max="200" value="100" step="5">
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="gamma-curve" width="360" height="260"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fef3c7;">🖼️</div>
+                        Image Processor
+                    </div>
+                    <div class="upload-area" id="gamma-upload">
+                        <div class="upload-text">
+                            <strong>Click to upload</strong> or drag an image<br>
+                            <span style="font-size: 11px; color: #94a3b8;">JPG, PNG supported</span>
+                        </div>
+                        <input type="file" id="gamma-file" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="image-grid" id="gamma-images" style="display: none;">
+                        <div class="image-card">
+                            <div class="image-card-label">Original</div>
+                            <canvas id="gamma-orig" width="180" height="180"></canvas>
+                        </div>
+                        <div class="image-card">
+                            <div class="image-card-label">Gamma Transformed</div>
+                            <canvas id="gamma-result" width="180" height="180"></canvas>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+                        <button class="btn btn-secondary" id="gamma-demo">Use Demo Image</button>
+                        <button class="btn btn-secondary" id="gamma-clear">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTRAST STRETCH -->
+        <div class="panel" id="panel-stretch">
+            <div class="split-layout">
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #d1fae5;">📐</div>
+                        Contrast Stretching
+                    </div>
+                    <div class="formula-box">
+                        <span class="var">s</span> <span class="op">=</span> <span class="op">(</span><span class="var">r</span> <span class="op">-</span> <span class="const">r<sub>min</sub></span><span class="op">)</span> <span class="op">×</span> <span class="const">255</span> <span class="op">/</span> <span class="op">(</span><span class="const">r<sub>max</sub></span> <span class="op">-</span> <span class="const">r<sub>min</sub></span><span class="op">)</span>
+                    </div>
+                    <div class="info-badge badge-stretch">Linear mapping to full [0,255] range</div>
+                    <div class="slider-group" style="margin-top: 16px;">
+                        <div class="slider-label">
+                            <span>r_min (clip low)</span>
+                            <span class="slider-value" id="rmin-val">Auto</span>
+                        </div>
+                        <input type="range" id="rmin-slider" min="0" max="255" value="0" step="1">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>r_max (clip high)</span>
+                            <span class="slider-value" id="rmax-val">Auto</span>
+                        </div>
+                        <input type="range" id="rmax-slider" min="0" max="255" value="255" step="1">
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <button class="btn btn-secondary" id="stretch-auto" style="flex: 1; font-size: 11px;">Auto Range</button>
+                        <button class="btn btn-secondary" id="stretch-percentile" style="flex: 1; font-size: 11px;">2% Percentile</button>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="stretch-curve" width="360" height="240"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <div class="icon" style="background: #fef3c7;">🖼️</div>
+                        Image Processor
+                    </div>
+                    <div class="upload-area" id="stretch-upload">
+                        <div class="upload-text">
+                            <strong>Click to upload</strong> or drag an image<br>
+                            <span style="font-size: 11px; color: #94a3b8;">JPG, PNG supported</span>
+                        </div>
+                        <input type="file" id="stretch-file" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="image-grid" id="stretch-images" style="display: none;">
+                        <div class="image-card">
+                            <div class="image-card-label">Original</div>
+                            <canvas id="stretch-orig" width="180" height="180"></canvas>
+                        </div>
+                        <div class="image-card">
+                            <div class="image-card-label">Stretched</div>
+                            <canvas id="stretch-result" width="180" height="180"></canvas>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 12px;">
+                        <button class="btn btn-secondary" id="stretch-demo">Use Demo Image</button>
+                        <button class="btn btn-secondary" id="stretch-clear">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ===== LOG TRANSFORM =====
+        const logC = document.getElementById('log-c');
+        const logCVal = document.getElementById('log-c-val');
+        const logCurve = document.getElementById('log-curve');
+        const logCtx = logCurve.getContext('2d');
+
+        function drawLogCurve() {
+            const c = parseInt(logC.value);
+            const auto = c === 0;
+            logCVal.textContent = auto ? 'Auto' : c.toFixed(1);
+            const cUse = auto ? 255 / Math.log(256) : c;
+            const w = logCurve.width, h = logCurve.height;
+            const pad = 40, gw = w - 2*pad, gh = h - 2*pad;
+            
+            logCtx.clearRect(0, 0, w, h);
+            logCtx.strokeStyle = '#e2e8f0'; logCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const x = pad + (i/4)*gw, y = pad + (i/4)*gh;
+                logCtx.beginPath(); logCtx.moveTo(x, pad); logCtx.lineTo(x, h-pad); logCtx.stroke();
+                logCtx.beginPath(); logCtx.moveTo(pad, y); logCtx.lineTo(w-pad, y); logCtx.stroke();
+            }
+            logCtx.strokeStyle = '#64748b'; logCtx.lineWidth = 2;
+            logCtx.beginPath(); logCtx.moveTo(pad, h-pad); logCtx.lineTo(w-pad, h-pad); logCtx.stroke();
+            logCtx.beginPath(); logCtx.moveTo(pad, pad); logCtx.lineTo(pad, h-pad); logCtx.stroke();
+            
+            logCtx.fillStyle = '#64748b'; logCtx.font = '11px Inter'; logCtx.textAlign = 'center';
+            logCtx.fillText('Input r', w/2, h-10);
+            logCtx.save(); logCtx.translate(14, h/2); logCtx.rotate(-Math.PI/2);
+            logCtx.fillText('Output s', 0, 0); logCtx.restore();
+            
+            logCtx.strokeStyle = '#4f46e5'; logCtx.lineWidth = 3; logCtx.beginPath();
+            for (let r = 0; r <= 255; r++) {
+                const s = cUse * Math.log(1 + r);
+                const x = pad + (r/255)*gw, y = h - pad - (s/255)*gh;
+                r === 0 ? logCtx.moveTo(x, y) : logCtx.lineTo(x, y);
+            }
+            logCtx.stroke();
+            
+            logCtx.strokeStyle = '#94a3b8'; logCtx.setLineDash([4,4]); logCtx.lineWidth = 1.5;
+            logCtx.beginPath(); logCtx.moveTo(pad, h-pad); logCtx.lineTo(w-pad, pad); logCtx.stroke();
+            logCtx.setLineDash([]);
+            
+            logCtx.fillStyle = '#1e293b'; logCtx.font = '10px Inter';
+            logCtx.fillText('0', pad-8, h-pad+14);
+            logCtx.fillText('255', w-pad, h-pad+14);
+            logCtx.fillText('255', pad-14, pad+4);
+        }
+        logC.addEventListener('input', drawLogCurve);
+        drawLogCurve();
+
+        // ===== GAMMA TRANSFORM =====
+        const gammaSlider = document.getElementById('gamma-slider');
+        const gammaVal = document.getElementById('gamma-val');
+        const gammaC = document.getElementById('gamma-c');
+        const gammaCVal = document.getElementById('gamma-c-val');
+        const gammaCurve = document.getElementById('gamma-curve');
+        const gammaCtx = gammaCurve.getContext('2d');
+
+        function drawGammaCurve() {
+            const gamma = parseInt(gammaSlider.value) / 100;
+            const c = parseInt(gammaC.value) / 100;
+            gammaVal.textContent = gamma.toFixed(2);
+            gammaCVal.textContent = c.toFixed(1);
+            const w = gammaCurve.width, h = gammaCurve.height;
+            const pad = 40, gw = w - 2*pad, gh = h - 2*pad;
+            
+            gammaCtx.clearRect(0, 0, w, h);
+            gammaCtx.strokeStyle = '#e2e8f0'; gammaCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const x = pad + (i/4)*gw, y = pad + (i/4)*gh;
+                gammaCtx.beginPath(); gammaCtx.moveTo(x, pad); gammaCtx.lineTo(x, h-pad); gammaCtx.stroke();
+                gammaCtx.beginPath(); gammaCtx.moveTo(pad, y); gammaCtx.lineTo(w-pad, y); gammaCtx.stroke();
+            }
+            gammaCtx.strokeStyle = '#64748b'; gammaCtx.lineWidth = 2;
+            gammaCtx.beginPath(); gammaCtx.moveTo(pad, h-pad); gammaCtx.lineTo(w-pad, h-pad); gammaCtx.stroke();
+            gammaCtx.beginPath(); gammaCtx.moveTo(pad, pad); gammaCtx.lineTo(pad, h-pad); gammaCtx.stroke();
+            
+            gammaCtx.fillStyle = '#64748b'; gammaCtx.font = '11px Inter'; gammaCtx.textAlign = 'center';
+            gammaCtx.fillText('Normalized r', w/2, h-10);
+            gammaCtx.save(); gammaCtx.translate(14, h/2); gammaCtx.rotate(-Math.PI/2);
+            gammaCtx.fillText('Output s', 0, 0); gammaCtx.restore();
+            
+            gammaCtx.strokeStyle = gamma < 1 ? '#ec4899' : (gamma > 1 ? '#8b5cf6' : '#4f46e5');
+            gammaCtx.lineWidth = 3; gammaCtx.beginPath();
+            for (let r = 0; r <= 255; r++) {
+                const rn = r / 255;
+                const s = c * Math.pow(rn, gamma) * 255;
+                const x = pad + (r/255)*gw, y = h - pad - (s/255)*gh;
+                r === 0 ? gammaCtx.moveTo(x, y) : gammaCtx.lineTo(x, y);
+            }
+            gammaCtx.stroke();
+            
+            gammaCtx.strokeStyle = '#94a3b8'; gammaCtx.setLineDash([4,4]); gammaCtx.lineWidth = 1.5;
+            gammaCtx.beginPath(); gammaCtx.moveTo(pad, h-pad); gammaCtx.lineTo(w-pad, pad); gammaCtx.stroke();
+            gammaCtx.setLineDash([]);
+            
+            gammaCtx.fillStyle = '#1e293b'; gammaCtx.font = '10px Inter';
+            gammaCtx.fillText('0', pad-8, h-pad+14);
+            gammaCtx.fillText('1.0', w-pad, h-pad+14);
+            gammaCtx.fillText('255', pad-14, pad+4);
+        }
+        gammaSlider.addEventListener('input', drawGammaCurve);
+        gammaC.addEventListener('input', drawGammaCurve);
+        drawGammaCurve();
+
+        // ===== CONTRAST STRETCH =====
+        const rminSlider = document.getElementById('rmin-slider');
+        const rmaxSlider = document.getElementById('rmax-slider');
+        const rminVal = document.getElementById('rmin-val');
+        const rmaxVal = document.getElementById('rmax-val');
+        const stretchCurve = document.getElementById('stretch-curve');
+        const stretchCtx = stretchCurve.getContext('2d');
+
+        function drawStretchCurve() {
+            const rmin = parseInt(rminSlider.value);
+            const rmax = parseInt(rmaxSlider.value);
+            rminVal.textContent = (rmin === 0 && rmax === 255) ? 'Auto' : rmin;
+            rmaxVal.textContent = (rmin === 0 && rmax === 255) ? 'Auto' : rmax;
+            const w = stretchCurve.width, h = stretchCurve.height;
+            const pad = 40, gw = w - 2*pad, gh = h - 2*pad;
+            
+            stretchCtx.clearRect(0, 0, w, h);
+            stretchCtx.strokeStyle = '#e2e8f0'; stretchCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const x = pad + (i/4)*gw, y = pad + (i/4)*gh;
+                stretchCtx.beginPath(); stretchCtx.moveTo(x, pad); stretchCtx.lineTo(x, h-pad); stretchCtx.stroke();
+                stretchCtx.beginPath(); stretchCtx.moveTo(pad, y); stretchCtx.lineTo(w-pad, y); stretchCtx.stroke();
+            }
+            stretchCtx.strokeStyle = '#64748b'; stretchCtx.lineWidth = 2;
+            stretchCtx.beginPath(); stretchCtx.moveTo(pad, h-pad); stretchCtx.lineTo(w-pad, h-pad); stretchCtx.stroke();
+            stretchCtx.beginPath(); stretchCtx.moveTo(pad, pad); stretchCtx.lineTo(pad, h-pad); stretchCtx.stroke();
+            
+            stretchCtx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+            stretchCtx.fillRect(pad, pad, (rmin/255)*gw, gh);
+            stretchCtx.fillRect(pad + (rmax/255)*gw, pad, gw - (rmax/255)*gw, gh);
+            
+            stretchCtx.strokeStyle = '#059669'; stretchCtx.lineWidth = 3; stretchCtx.beginPath();
+            stretchCtx.moveTo(pad, h-pad);
+            stretchCtx.lineTo(pad + (rmin/255)*gw, h-pad);
+            stretchCtx.lineTo(pad + (rmax/255)*gw, pad);
+            stretchCtx.lineTo(w-pad, pad);
+            stretchCtx.stroke();
+            
+            stretchCtx.strokeStyle = '#94a3b8'; stretchCtx.setLineDash([4,4]); stretchCtx.lineWidth = 1.5;
+            stretchCtx.beginPath(); stretchCtx.moveTo(pad, h-pad); stretchCtx.lineTo(w-pad, pad); stretchCtx.stroke();
+            stretchCtx.setLineDash([]);
+            
+            stretchCtx.fillStyle = '#ef4444'; stretchCtx.font = '10px Inter';
+            stretchCtx.fillText('r_min', pad + (rmin/255)*gw, h-pad+16);
+            stretchCtx.fillText('r_max', pad + (rmax/255)*gw, h-pad+16);
+            
+            stretchCtx.fillStyle = '#1e293b';
+            stretchCtx.fillText('0', pad-8, h-pad+14);
+            stretchCtx.fillText('255', w-pad, h-pad+14);
+            stretchCtx.fillText('255', pad-14, pad+4);
+        }
+        rminSlider.addEventListener('input', drawStretchCurve);
+        rmaxSlider.addEventListener('input', drawStretchCurve);
+        drawStretchCurve();
+
+        document.getElementById('stretch-auto').addEventListener('click', () => {
+            rminSlider.value = 0; rmaxSlider.value = 255; drawStretchCurve();
+        });
+        document.getElementById('stretch-percentile').addEventListener('click', () => {
+            rminSlider.value = 5; rmaxSlider.value = 250; drawStretchCurve();
+        });
+
+        // ===== IMAGE PROCESSOR SETUP =====
+        function setupImageProcessor(prefix, transformFn) {
+            const upload = document.getElementById(prefix + '-upload');
+            const fileInput = document.getElementById(prefix + '-file');
+            const imagesDiv = document.getElementById(prefix + '-images');
+            const origCanvas = document.getElementById(prefix + '-orig');
+            const resultCanvas = document.getElementById(prefix + '-result');
+            const demoBtn = document.getElementById(prefix + '-demo');
+            const clearBtn = document.getElementById(prefix + '-clear');
+            
+            let originalPixels = null, imgW = 0, imgH = 0;
+            
+            function processImage() {
+                if (!originalPixels) return;
+                const out = transformFn(originalPixels, imgW, imgH);
+                const ctx = resultCanvas.getContext('2d');
+                ctx.putImageData(new ImageData(out, imgW, imgH), 0, 0);
+            }
+            
+            function loadPixels(pixels, w, h) {
+                originalPixels = pixels; imgW = w; imgH = h;
+                origCanvas.width = w; origCanvas.height = h;
+                resultCanvas.width = w; resultCanvas.height = h;
+                origCanvas.getContext('2d').putImageData(new ImageData(pixels, w, h), 0, 0);
+                imagesDiv.style.display = 'grid';
+                upload.classList.add('has-image');
+                upload.innerHTML = '<div class="upload-text">Click to change image</div>';
+                processImage();
+            }
+            
+            upload.addEventListener('click', () => fileInput.click());
+            upload.addEventListener('dragover', (e) => { e.preventDefault(); upload.style.borderColor = '#6366f1'; upload.style.background = '#f5f3ff'; });
+            upload.addEventListener('dragleave', () => { upload.style.borderColor = ''; upload.style.background = ''; });
+            upload.addEventListener('drop', (e) => {
+                e.preventDefault(); upload.style.borderColor = ''; upload.style.background = '';
+                if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            });
+            fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+            
+            function handleFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 180;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > maxDim) { h *= maxDim/w; w = maxDim; }}
+                        else { if (h > maxDim) { w *= maxDim/h; h = maxDim; }}
+                        canvas.width = Math.round(w); canvas.height = Math.round(h);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const gray = new Uint8ClampedArray(imgData.data.length);
+                        for (let i = 0; i < imgData.data.length; i += 4) {
+                            const g = 0.299*imgData.data[i] + 0.587*imgData.data[i+1] + 0.114*imgData.data[i+2];
+                            gray[i] = gray[i+1] = gray[i+2] = g; gray[i+3] = 255;
+                        }
+                        loadPixels(gray, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            demoBtn.addEventListener('click', () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 180; canvas.height = 180;
+                const ctx = canvas.getContext('2d');
+                const imgData = ctx.createImageData(180, 180);
+                for (let y = 0; y < 180; y++) {
+                    for (let x = 0; x < 180; x++) {
+                        const i = (y*180+x)*4;
+                        const v = Math.floor(50 + 120*Math.sin(x/25)*Math.cos(y/20) + 30*Math.random());
+                        imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = v;
+                        imgData.data[i+3] = 255;
+                    }
+                }
+                loadPixels(imgData.data, 180, 180);
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                originalPixels = null; imagesDiv.style.display = 'none';
+                upload.classList.remove('has-image');
+                upload.innerHTML = `<div class="upload-text"><strong>Click to upload</strong> or drag an image<br><span style="font-size:11px;color:#94a3b8;">JPG, PNG supported</span></div>`;
+            });
+            
+            // Re-process on slider change
+            const allSliders = [logC, gammaSlider, gammaC, rminSlider, rmaxSlider];
+            allSliders.forEach(s => { if (s) s.addEventListener('input', () => { if (originalPixels) processImage(); }); });
+        }
+
+        // Setup all three processors
+        setupImageProcessor('log', function(pixels, w, h) {
+            const c = parseInt(logC.value);
+            const cUse = c === 0 ? 255 / Math.log(1 + 255) : c;
+            const out = new Uint8ClampedArray(pixels.length);
+            for (let i = 0; i < pixels.length; i += 4) {
+                const s = cUse * Math.log(1 + pixels[i]);
+                const v = Math.min(255, Math.max(0, s));
+                out[i] = out[i+1] = out[i+2] = v; out[i+3] = 255;
+            }
+            return out;
+        });
+
+        setupImageProcessor('gamma', function(pixels, w, h) {
+            const gamma = parseInt(gammaSlider.value) / 100;
+            const c = parseInt(gammaC.value) / 100;
+            const out = new Uint8ClampedArray(pixels.length);
+            for (let i = 0; i < pixels.length; i += 4) {
+                const gray = pixels[i] / 255;
+                const s = c * Math.pow(gray, gamma) * 255;
+                const v = Math.min(255, Math.max(0, s));
+                out[i] = out[i+1] = out[i+2] = v; out[i+3] = 255;
+            }
+            return out;
+        });
+
+        setupImageProcessor('stretch', function(pixels, w, h) {
+            let rmin = parseInt(rminSlider.value);
+            let rmax = parseInt(rmaxSlider.value);
+            if (rmin === 0 && rmax === 255) {
+                let minV = 255, maxV = 0;
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const v = pixels[i];
+                    if (v < minV) minV = v; if (v > maxV) maxV = v;
+                }
+                rmin = minV; rmax = maxV;
+            }
+            const range = rmax - rmin || 1;
+            const out = new Uint8ClampedArray(pixels.length);
+            for (let i = 0; i < pixels.length; i += 4) {
+                const gray = pixels[i];
+                let s = gray <= rmin ? 0 : (gray >= rmax ? 255 : ((gray - rmin) / range) * 255);
+                const v = Math.min(255, Math.max(0, s));
+                out[i] = out[i+1] = out[i+2] = v; out[i+3] = 255;
+            }
+            return out;
+        });
+    })();
+    </script>
+</body>
+</html>

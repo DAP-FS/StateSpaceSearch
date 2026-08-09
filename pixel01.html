@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Matrix Geometry — 3×3 Neighborhood</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .matrix-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            padding: 32px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            max-width: 480px;
+            width: 100%;
+        }
+
+        .matrix-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a2e;
+            text-align: center;
+        }
+
+        .matrix-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: -16px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 10px;
+            position: relative;
+            padding: 10px;
+        }
+
+        .pixel-cell {
+            width: 90px;
+            height: 90px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            user-select: none;
+        }
+
+        .pixel-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .pixel-cell.neighbor {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border-color: #818cf8;
+        }
+
+        .pixel-cell.neighbor:hover {
+            background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .pixel-cell.center {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-color: #d97706;
+            box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
+            animation: pulse-center 2s ease-in-out infinite;
+        }
+
+        .pixel-cell.center:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.5);
+        }
+
+        @keyframes pulse-center {
+            0%, 100% { box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 8px 32px rgba(245, 158, 11, 0.6); }
+        }
+
+        .pixel-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 4px;
+        }
+
+        .pixel-cell.center .pixel-label {
+            color: #92400e;
+        }
+
+        .pixel-value {
+            font-size: 11px;
+            color: #6b7280;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            padding: 0 4px;
+        }
+
+        .pixel-cell.center .pixel-value {
+            color: #78350f;
+            font-weight: 600;
+        }
+
+        .coord-display {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 20px 28px;
+            width: 100%;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .coord-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 10px;
+        }
+
+        .coord-math {
+            font-size: 16px;
+            color: #1e293b;
+            font-family: 'Times New Roman', serif;
+            line-height: 1.7;
+        }
+
+        .coord-math .highlight {
+            color: #d97706;
+            font-weight: 700;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .wave-indicator {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            border: 2px solid rgba(99, 102, 241, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            top: 0;
+            left: 0;
+        }
+
+        .wave-active {
+            animation: wave-expand 1.2s ease-out forwards;
+        }
+
+        @keyframes wave-expand {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 4px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        .legend-dot.center { background: #f59e0b; }
+        .legend-dot.neighbor { background: #818cf8; }
+
+        .formula-box {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 12px;
+            width: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+
+        .formula-box .f-center {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .formula-box .f-neighbor {
+            color: #a5b4fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-container">
+        <div class="matrix-title">Spatial Matrix Geometry</div>
+        <div class="matrix-subtitle">3 × 3 Neighborhood — Hover over pixels to explore</div>
+        
+        <div class="matrix-grid" id="matrixGrid">
+            <!-- Cells generated by JavaScript -->
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot center"></div>
+                <span>Target Pixel z₅ = f(x,y)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot neighbor"></div>
+                <span>Neighborhood z₁–z₄, z₆–z₉</span>
+            </div>
+        </div>
+        
+        <div class="formula-box" id="formulaBox">
+Z = [z₁  z₂  z₃]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[z₄ <span class="f-center">z₅</span>  z₆]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;[z₇  z₈  z₉]
+        </div>
+        
+        <div class="coord-display" id="coordDisplay">
+            <div class="coord-title">Spatial Relationship</div>
+            <div class="coord-math" id="coordMath">
+                Hover over any pixel to see its coordinate mapping
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" id="btnWave">▶ Propagate Wave</button>
+            <button class="btn btn-secondary" id="btnReset">Reset View</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const grid = document.getElementById('matrixGrid');
+            const coordMath = document.getElementById('coordMath');
+            const formulaBox = document.getElementById('formulaBox');
+            
+            // 3x3 matrix definition with spatial coordinates
+            const matrix = [
+                { label: 'z₁', x: -1, y: -1, func: 'f(x-1, y-1)', desc: 'Top-Left' },
+                { label: 'z₂', x: 0, y: -1, func: 'f(x-1, y)', desc: 'Top-Center' },
+                { label: 'z₃', x: 1, y: -1, func: 'f(x-1, y+1)', desc: 'Top-Right' },
+                { label: 'z₄', x: -1, y: 0, func: 'f(x, y-1)', desc: 'Middle-Left' },
+                { label: 'z₅', x: 0, y: 0, func: 'f(x, y)', desc: 'Center (Target)' },
+                { label: 'z₆', x: 1, y: 0, func: 'f(x, y+1)', desc: 'Middle-Right' },
+                { label: 'z₇', x: -1, y: 1, func: 'f(x+1, y-1)', desc: 'Bottom-Left' },
+                { label: 'z₈', x: 0, y: 1, func: 'f(x+1, y)', desc: 'Bottom-Center' },
+                { label: 'z₉', x: 1, y: 1, func: 'f(x+1, y+1)', desc: 'Bottom-Right' }
+            ];
+
+            // Create grid cells
+            matrix.forEach((cell, index) => {
+                const div = document.createElement('div');
+                div.className = 'pixel-cell ' + (index === 4 ? 'center' : 'neighbor');
+                div.dataset.index = index;
+                
+                const label = document.createElement('div');
+                label.className = 'pixel-label';
+                label.innerHTML = cell.label;
+                
+                const value = document.createElement('div');
+                value.className = 'pixel-value';
+                value.textContent = cell.func;
+                
+                div.appendChild(label);
+                div.appendChild(value);
+                
+                // Hover interactions
+                div.addEventListener('mouseenter', () => {
+                    updateDisplay(cell, index);
+                    highlightCell(index);
+                    updateFormula(index);
+                });
+                
+                div.addEventListener('mouseleave', () => {
+                    resetHighlights();
+                });
+                
+                grid.appendChild(div);
+            });
+
+            function updateDisplay(cell, index) {
+                const isCenter = index === 4;
+                const color = isCenter ? '#d97706' : '#4f46e5';
+                
+                coordMath.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: ${color}; font-size: 17px;">${cell.desc}</strong>
+                    </div>
+                    <div style="font-size: 18px; margin-bottom: 6px;">
+                        ${cell.label} = <span class="highlight">${cell.func}</span>
+                    </div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 8px;">
+                        Relative offset: (Δx, Δy) = (${formatOffset(cell.x)}, ${formatOffset(cell.y)})
+                    </div>
+                `;
+            }
+
+            function formatOffset(n) {
+                return n >= 0 ? '+' + n : n.toString();
+            }
+
+            function highlightCell(hoveredIndex) {
+                const cells = grid.querySelectorAll('.pixel-cell');
+                cells.forEach((c, i) => {
+                    if (i === hoveredIndex) {
+                        c.style.transform = 'scale(1.15)';
+                        c.style.zIndex = '20';
+                    } else if (i !== 4) {
+                        c.style.opacity = hoveredIndex === 4 ? '1' : '0.45';
+                    }
+                });
+            }
+
+            function resetHighlights() {
+                const cells = grid.querySelectorAll('.pixel-cell');
+                cells.forEach(c => {
+                    c.style.transform = '';
+                    c.style.zIndex = '';
+                    c.style.opacity = '1';
+                });
+            }
+
+            function updateFormula(activeIndex) {
+                const labels = ['z₁','z₂','z₃','z₄','z₅','z₆','z₇','z₈','z₉'];
+                let html = 'Z = [';
+                
+                for (let i = 0; i < 9; i++) {
+                    if (i > 0 && i % 3 === 0) {
+                        html += ']<br>&nbsp;&nbsp;&nbsp;&nbsp;[';
+                    } else if (i > 0) {
+                        html += '  ';
+                    }
+                    
+                    if (i === activeIndex) {
+                        html += `<span class="f-center">${labels[i]}</span>`;
+                    } else {
+                        html += `<span class="f-neighbor">${labels[i]}</span>`;
+                    }
+                }
+                html += ']';
+                formulaBox.innerHTML = html;
+            }
+
+            // Wave propagation animation
+            document.getElementById('btnWave').addEventListener('click', () => {
+                const cells = grid.querySelectorAll('.pixel-cell');
+                
+                // Reset
+                cells.forEach(c => {
+                    c.style.transform = 'scale(1)';
+                    c.style.opacity = '1';
+                });
+                
+                // Start from center
+                const center = cells[4];
+                center.style.transform = 'scale(1.25)';
+                
+                // Propagate to neighbors with staggered delay
+                const order = [1, 3, 5, 7, 0, 2, 6, 8]; // Distance-based order
+                
+                order.forEach((idx, i) => {
+                    setTimeout(() => {
+                        cells[idx].style.transform = 'scale(1.2)';
+                        cells[idx].style.opacity = '1';
+                        
+                        // Wave ring effect
+                        const wave = document.createElement('div');
+                        wave.className = 'wave-indicator wave-active';
+                        cells[idx].appendChild(wave);
+                        setTimeout(() => wave.remove(), 1200);
+                        
+                        setTimeout(() => {
+                            cells[idx].style.transform = 'scale(1)';
+                        }, 400);
+                    }, (i + 1) * 180);
+                });
+                
+                setTimeout(() => {
+                    center.style.transform = 'scale(1)';
+                }, 1800);
+                
+                coordMath.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: #d97706; font-size: 17px;">Wave Propagation</strong>
+                    </div>
+                    <div style="font-size: 16px;">
+                        Information spreads from <span class="highlight">z₅ = f(x,y)</span>
+                    </div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 8px;">
+                        Each neighbor receives influence from the central target pixel
+                    </div>
+                `;
+            });
+
+            // Reset button
+            document.getElementById('btnReset').addEventListener('click', () => {
+                const cells = grid.querySelectorAll('.pixel-cell');
+                cells.forEach(c => {
+                    c.style.transform = '';
+                    c.style.opacity = '1';
+                    c.style.zIndex = '';
+                });
+                coordMath.innerHTML = 'Hover over any pixel to see its coordinate mapping';
+                formulaBox.innerHTML = `Z = [z₁  z₂  z₃]<br>&nbsp;&nbsp;&nbsp;&nbsp;[z₄ <span class="f-center">z₅</span>  z₆]<br>&nbsp;&nbsp;&nbsp;&nbsp;[z₇  z₈  z₉]`;
+            });
+
+            // Initialize with center selected
+            updateDisplay(matrix[4], 4);
+        })();
+    </script>
+</body>
+</html>Pixel

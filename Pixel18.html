@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Filtering in Digital Image Processing — Interactive Laboratory</title>
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --border-dark: #94a3b8;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --primary: #1d4ed8;
+            --primary-light: #eff6ff;
+            --primary-border: #3b82f6;
+            --kernel-color: #0284c7;
+            --kernel-bg: #f0f9ff;
+            --mult-color: #7c3aed;
+            --mult-bg: #f5f3ff;
+            --sum-color: #059669;
+            --sum-bg: #ecfdf5;
+            --center-color: #dc2626;
+            --center-bg: #fef2f2;
+            --pad-color: #d97706;
+            --pad-bg: #fffbeb;
+            --pad-border: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 16px;
+            line-height: 1.4;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .brand h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.02em;
+        }
+
+        .brand .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .academic-badge {
+            background: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* CHAPTER NAVIGATION BAR */
+        .chapter-bar {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            scrollbar-width: thin;
+        }
+
+        .chap-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .chap-btn:hover {
+            background: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        .chap-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        /* CHAPTER EXPLANATION BANNER */
+        .banner-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .banner-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .banner-desc {
+            font-size: 13px;
+            color: var(--text-main);
+        }
+
+        .math-eq {
+            font-family: "Courier New", Courier, monospace;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        /* CONTROL TOOLBAR */
+        .controls-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        select, input[type="range"] {
+            background: var(--bg-main);
+            border: 1px solid var(--border-dark);
+            color: var(--text-main);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-dark);
+            background: #ffffff;
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            opacity: 0.95;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+
+        /* MAIN STAGE LAYOUT */
+        .stage-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr 240px;
+            gap: 16px;
+        }
+
+        @media (max-width: 1080px) {
+            .stage-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .panel-header {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* MATRIX STYLING */
+        .matrix-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .grid-7x7 {
+            display: grid;
+            grid-template-columns: repeat(7, 34px);
+            gap: 3px;
+        }
+
+        .grid-5x5 {
+            display: grid;
+            grid-template-columns: repeat(5, 38px);
+            gap: 3px;
+        }
+
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, 44px);
+            gap: 4px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 11px;
+            font-weight: 700;
+            user-select: none;
+            transition: all 0.15s ease;
+            position: relative;
+            background: #ffffff;
+        }
+
+        .cell.padded {
+            background: var(--pad-bg);
+            border-color: var(--pad-border);
+            color: var(--pad-color);
+        }
+
+        .cell.in-window {
+            border-color: var(--primary-border) !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+            z-index: 2;
+        }
+
+        .cell.center-cell {
+            border-color: var(--center-color) !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.6);
+            background: var(--center-bg);
+            z-index: 3;
+        }
+
+        .cell.active-mult {
+            border-color: var(--mult-color) !important;
+            background: var(--mult-bg) !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.5);
+            transform: scale(1.08);
+            z-index: 4;
+        }
+
+        .cell.computed {
+            border-color: var(--sum-color);
+            background: var(--sum-bg);
+            color: var(--sum-color);
+        }
+
+        .cell-sub {
+            font-size: 7px;
+            opacity: 0.65;
+            line-height: 1;
+        }
+
+        /* CALCULATION PIPELINE CENTER PANEL */
+        .pipeline-workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .three-matrices-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--bg-main);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .matrix-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .matrix-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .operator-icon {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        /* ACCUMULATOR SUM BOX */
+        .summation-card {
+            background: var(--sum-bg);
+            border: 1px solid var(--sum-color);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+        }
+
+        .sum-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .hl-p { color: var(--pad-color); font-weight: bold; }
+        .hl-k { color: var(--kernel-color); font-weight: bold; }
+        .hl-m { color: var(--mult-color); font-weight: bold; }
+        .hl-s { color: var(--sum-color); font-weight: bold; }
+        .hl-c { color: var(--center-color); font-weight: bold; }
+
+        /* MATHEMATICAL STEP INSPECTOR PANEL */
+        .math-inspector {
+            background: #0f172a;
+            color: #f8fafc;
+            border-radius: 10px;
+            padding: 12px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .math-step-title {
+            color: #38bdf8;
+            font-weight: bold;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 4px;
+            font-size: 11px;
+        }
+
+        /* REAL IMAGE CANVAS SECTION */
+        .canvas-workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .canvas-workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .canvas-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        canvas {
+            background: #000;
+            border: 1px solid var(--border-dark);
+            border-radius: 6px;
+            cursor: crosshair;
+            width: 100%;
+            height: auto;
+            max-width: 240px;
+            aspect-ratio: 4/3;
+            image-rendering: pixelated;
+        }
+
+        /* SUMMARY FLOWCHART DIAGRAM */
+        .flowchart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .flow-node {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .flow-node-title {
+            color: var(--primary);
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .legend-row {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-box {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <header>
+        <div class="brand">
+            <h1>Spatial Filtering in Digital Image Processing</h1>
+            <div class="subtitle">Interactive Academic Laboratory & Mathematical Step Inspector</div>
+        </div>
+        <div class="academic-badge">EE / CS Undergraduate Module</div>
+    </header>
+
+    <!-- CHAPTER NAVIGATION TABS -->
+    <div class="chapter-bar" id="chapterBar">
+        <!-- Generated Dynamically -->
+    </div>
+
+    <!-- CHAPTER EXPLANATION BANNER -->
+    <div class="banner-card">
+        <div class="banner-title">
+            <span id="chapTitle">Chapter 01: What is Spatial Filtering?</span>
+            <span id="chapStepBadge" class="math-eq">Step 1 / 13</span>
+        </div>
+        <div class="banner-desc" id="chapDesc">
+            Spatial filtering performs direct pixel-neighborhood operations on an image matrix using a convolution mask or kernel.
+        </div>
+    </div>
+
+    <!-- GLOBAL CONTROLS BAR -->
+    <div class="controls-card">
+        <div class="control-group">
+            <label for="filterSelect">Kernel Filter Mask:</label>
+            <select id="filterSelect">
+                <option value="mean">Mean / Box Filter (3x3 Smoothing)</option>
+                <option value="gaussian">Gaussian Filter (Weighted Smoothing)</option>
+                <option value="sharpen">Sharpen Filter (Contrast Enhancement)</option>
+                <option value="sobelX">Sobel X (Horizontal Gradient Gx)</option>
+                <option value="sobelY">Sobel Y (Vertical Gradient Gy)</option>
+                <option value="laplacian">Laplacian (2nd Order Derivative Edge)</option>
+                <option value="identity">Identity Filter (Pass-through)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="paddingSelect">Boundary Padding:</label>
+            <select id="paddingSelect">
+                <option value="zero">Zero Padding (Border = 0)</option>
+                <option value="clamp">Clamp / Replicate Edge</option>
+                <option value="reflect">Reflect / Mirror Boundary</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="speedRange">Speed:</label>
+            <input type="range" id="speedRange" min="100" max="1200" value="500" step="50" style="width: 80px; direction: rtl;">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="btnPlay">▶ Play</button>
+            <button class="btn" id="btnPrev">⏮ Prev Step</button>
+            <button class="btn" id="btnNext">⏭ Next Step</button>
+            <button class="btn" id="btnReset">↻ Reset</button>
+        </div>
+    </div>
+
+    <!-- MAIN INTERACTIVE STAGE GRID -->
+    <div class="stage-grid">
+
+        <!-- LEFT PANEL: 5x5 IMAGE MATRIX WITH 1PX PADDING -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span>1. Input Matrix f(x,y)</span>
+                <span style="color: var(--pad-color); font-size: 10px;">7×7 Padded View</span>
+            </div>
+            
+            <div class="matrix-container">
+                <div class="matrix-grid grid-7x7" id="inputGrid"></div>
+            </div>
+
+            <div class="legend-row">
+                <div class="legend-item">
+                    <div class="legend-box" style="background: var(--pad-bg); border: 1px solid var(--pad-border);"></div>
+                    <span>Padded Border</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: var(--center-bg); border: 1px solid var(--center-color);"></div>
+                    <span>Center f(x,y)</span>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: var(--text-muted); text-align: center;">
+                💡 <em>Click any pixel inside the 5×5 grid to move the scanning window directly.</em>
+            </div>
+        </div>
+
+        <!-- CENTER PANEL: PIPELINE & ARITHMETIC ENGINE -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span>2. Neighborhood Convolution Pipeline</span>
+                <span id="subStepStatus" style="color: var(--primary); font-size: 10px;">Sub-step: 0 / 11</span>
+            </div>
+
+            <div class="pipeline-workspace">
+                <!-- Three Matrices: Neighborhood x Kernel = Pairwise Product -->
+                <div class="three-matrices-row">
+                    <div class="matrix-box">
+                        <span class="matrix-label">Image Neighborhood f</span>
+                        <div class="matrix-grid grid-3x3" id="neighGrid"></div>
+                    </div>
+
+                    <span class="operator-icon">⊙</span>
+
+                    <div class="matrix-box">
+                        <span class="matrix-label">Filter Kernel w</span>
+                        <div class="matrix-grid grid-3x3" id="kernelGrid"></div>
+                    </div>
+
+                    <span class="operator-icon">=</span>
+
+                    <div class="matrix-box">
+                        <span class="matrix-label">Pairwise Product</span>
+                        <div class="matrix-grid grid-3x3" id="prodGrid"></div>
+                    </div>
+                </div>
+
+                <!-- Accumulator Box -->
+                <div class="summation-card" id="summationCard">
+                    <!-- Dynamic Sum Breakdown -->
+                </div>
+
+                <!-- Mathematical Step Inspector -->
+                <div class="math-inspector" id="mathInspector">
+                    <!-- Step-by-step mathematical readout -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: OUTPUT MATRIX & REAL IMAGE INSPECTOR -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <span>3. Output Matrix g(x,y)</span>
+                <span style="color: var(--sum-color); font-size: 10px;">Filtered Result</span>
+            </div>
+
+            <div class="matrix-container">
+                <div class="matrix-grid grid-5x5" id="outputGrid"></div>
+            </div>
+
+            <!-- Real Image Canvas Test Inspector -->
+            <div class="panel-header" style="margin-top: 8px;">
+                <span>4. Real Image Inspector</span>
+            </div>
+
+            <div class="canvas-workspace">
+                <div class="canvas-box">
+                    <span style="font-size: 10px; color: var(--text-muted);">Source f(x,y)</span>
+                    <canvas id="srcCanvas" width="120" height="90"></canvas>
+                </div>
+                <div class="canvas-box">
+                    <span style="font-size: 10px; color: var(--text-muted);">Filtered g(x,y)</span>
+                    <canvas id="dstCanvas" width="120" height="90"></canvas>
+                </div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); text-align: center;">
+                Hover mouse over source image to inspect real-time spatial neighborhood arithmetic.
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAPTER 13 CONCEPT SUMMARY FLOWCHART SECTION -->
+    <div class="panel-card" id="summarySection">
+        <div class="panel-header">
+            <span>Summary: Spatial Filtering Processing Pipeline</span>
+        </div>
+        <div class="flowchart-grid">
+            <div class="flow-node">
+                <span class="flow-node-title">Step 1</span>
+                <span>Select Target Pixel f(x,y)</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 2</span>
+                <span>Extract 3×3 Local Neighborhood</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 3</span>
+                <span>Apply Boundary Padding Mode</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 4</span>
+                <span>Element-wise Pairwise Multiplication</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 5</span>
+                <span>Sum Products + Divisor Scale + Bias</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 6</span>
+                <span>Clamp [0..255] ➔ Write g(x,y)</span>
+            </div>
+            <div class="flow-node">
+                <span class="flow-node-title">Step 7</span>
+                <span>Slide Kernel Window to Next Pixel</span>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Digital Image Processing Educational Laboratory • Standard Spatial Convolution Notation: g(x,y) = ∑∑ w(s,t) f(x+s, y+t)
+    </footer>
+</div>
+
+<script>
+    // --- CHAPTER DEFINITIONS ---
+    const CHAPTERS = [
+        { id: 1, name: "01 Overview", title: "Chapter 01: What is Spatial Filtering?", desc: "Spatial filtering processes an image by computing each output pixel g(x,y) from a local neighborhood of input pixels centered at f(x,y)." },
+        { id: 2, name: "02 Neighborhood", title: "Chapter 02: Pixel Neighborhood", desc: "For a 3×3 spatial filter, the local neighborhood around target pixel f(x,y) consists of 9 pixels from f(x-1, y-1) to f(x+1, y+1)." },
+        { id: 3, name: "03 Kernel Mask", title: "Chapter 03: Filter Kernel / Mask", desc: "The filter kernel w(s,t) is a 3×3 matrix of coefficients (weights). The choice of weights defines the spatial operation (blur, sharpen, edge)." },
+        { id: 4, name: "04 Pairwise Multiply", title: "Chapter 04: Element-wise Multiplication", desc: "Each of the 9 neighborhood pixel intensities is multiplied individually by its corresponding kernel coefficient w(s,t)." },
+        { id: 5, name: "05 Accumulation", title: "Chapter 05: Summation & Normalization", desc: "The 9 resulting pairwise products are summed together, divided by the scale divisor D, and offset by a post-convolution bias B." },
+        { id: 6, name: "06 Output Pixel", title: "Chapter 06: Generating Output Pixel g(x,y)", desc: "The accumulated scalar result is clamped to valid 8-bit intensity range [0, 255] and stored in output matrix g(x,y)." },
+        { id: 7, name: "07 Sliding Window", title: "Chapter 07: Sliding Kernel Scan", desc: "The kernel slides row-by-row, column-by-column across the input matrix, producing the complete filtered output image." },
+        { id: 8, name: "08 Padding Modes", title: "Chapter 08: Boundary Padding Mechanics", desc: "At image borders, the 3×3 neighborhood extends outside the image frame. Padding handles boundaries via Zero, Clamp, or Reflect modes." },
+        { id: 9, name: "09 Smoothing", title: "Chapter 09: Spatial Smoothing Filters", desc: "Mean and Gaussian filters average spatial neighbors. Sum of kernel weights equals divisor (e.g. 1/9 or 1/16), removing noise." },
+        { id: 10, name: "10 Sharpening", title: "Chapter 10: Sharpening Filters", desc: "Sharpening enhances intensity transitions by emphasizing the center pixel while subtracting surrounding neighbor averages." },
+        { id: 11, name: "11 Edge Detection", title: "Chapter 11: Derivative Edge Detection", desc: "Sobel and Laplacian operators compute spatial intensity gradients (1st and 2nd derivatives) to isolate object boundaries." },
+        { id: 12, name: "12 Real Image", title: "Chapter 12: Real Image Application", desc: "Hover crosshairs across standard image canvases to inspect live pixel neighborhoods and spatial convolution calculations." },
+        { id: 13, name: "13 Summary", title: "Chapter 13: Processing Summary Flowchart", desc: "Complete mathematical relationship: Neighborhood × Kernel ➔ Pairwise Products ➔ Accumulator Sum ➔ Clamped Output Pixel." }
+    ];
+
+    // --- FILTER PRESETS ---
+    const KERNEL_PRESETS = {
+        mean: { weights: [[1,1,1],[1,1,1],[1,1,1]], div: 9, bias: 0, text: "Averages 9 neighborhood pixels uniformly to suppress high-frequency noise." },
+        gaussian: { weights: [[1,2,1],[2,4,2],[1,2,1]], div: 16, bias: 0, text: "Applies Gaussian bell-curve weights to smooth image while preserving edge structures." },
+        sharpen: { weights: [[0,-1,0],[-1,5,-1],[0,-1,0]], div: 1, bias: 0, text: "High-pass contrast enhancement: amplifies center pixel difference relative to neighbors." },
+        sobelX: { weights: [[-1,0,1],[-2,0,2],[-1,0,1]], div: 1, bias: 128, text: "Sobel Horizontal Operator (Gx): measures vertical edges via horizontal intensity gradient." },
+        sobelY: { weights: [[-1,-2,-1],[0,0,0],[1,2,1]], div: 1, bias: 128, text: "Sobel Vertical Operator (Gy): measures horizontal edges via vertical intensity gradient." },
+        laplacian: { weights: [[0,1,0],[1,-4,1],[0,1,0]], div: 1, bias: 128, text: "Laplacian Operator: second-order isotropic spatial derivative for zero-crossing edge detection." },
+        identity: { weights: [[0,0,0],[0,1,0],[0,0,0]], div: 1, bias: 0, text: "Identity Kernel: passes central input pixel directly to output without spatial alteration." }
+    };
+
+    // --- APP STATE ---
+    let activeChap = 1;
+    let inputMatrix = [
+        [ 40,  40,  40, 200, 200],
+        [ 40,  40,  40, 200, 200],
+        [ 40,  40,  80, 200, 200],
+        [200, 200, 200, 200, 200],
+        [200, 200, 200, 200, 200]
+    ];
+    let outputMatrix = [
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null],
+        [null, null, null, null, null]
+    ];
+
+    let scanR = 0;
+    let scanC = 0;
+    let subStep = 0; // 0: Select, 1..9: Pairwise Mult, 10: Sum, 11: Output Commit
+    let isPlaying = false;
+    let playTimer = null;
+    let stepDelay = 500;
+
+    let filterKey = 'mean';
+    let padMode = 'zero';
+
+    // DOM ELEMENTS
+    const chapterBar = document.getElementById('chapterBar');
+    const chapTitle = document.getElementById('chapTitle');
+    const chapDesc = document.getElementById('chapDesc');
+    const chapStepBadge = document.getElementById('chapStepBadge');
+    const filterSelect = document.getElementById('filterSelect');
+    const paddingSelect = document.getElementById('paddingSelect');
+    const speedRange = document.getElementById('speedRange');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnReset = document.getElementById('btnReset');
+
+    const inputGrid = document.getElementById('inputGrid');
+    const neighGrid = document.getElementById('neighGrid');
+    const kernelGrid = document.getElementById('kernelGrid');
+    const prodGrid = document.getElementById('prodGrid');
+    const outputGrid = document.getElementById('outputGrid');
+    const subStepStatus = document.getElementById('subStepStatus');
+    const summationCard = document.getElementById('summationCard');
+    const mathInspector = document.getElementById('mathInspector');
+
+    const srcCanvas = document.getElementById('srcCanvas');
+    const dstCanvas = document.getElementById('dstCanvas');
+    const ctxSrc = srcCanvas.getContext('2d');
+    const ctxDst = dstCanvas.getContext('2d');
+
+    // --- PADDING LOGIC ---
+    function getPixelVal(r, c) {
+        const H = 5, W = 5;
+        if (r >= 0 && r < H && c >= 0 && c < W) {
+            return { val: inputMatrix[r][c], isPad: false };
+        }
+        if (padMode === 'zero') {
+            return { val: 0, isPad: true };
+        } else if (padMode === 'clamp') {
+            let pr = Math.max(0, Math.min(H - 1, r));
+            let pc = Math.max(0, Math.min(W - 1, c));
+            return { val: inputMatrix[pr][pc], isPad: true };
+        } else if (padMode === 'reflect') {
+            let pr = r < 0 ? Math.abs(r) : (r >= H ? 2*H - r - 2 : r);
+            let pc = c < 0 ? Math.abs(c) : (c >= W ? 2*W - c - 2 : c);
+            pr = Math.max(0, Math.min(H - 1, pr));
+            pc = Math.max(0, Math.min(W - 1, pc));
+            return { val: inputMatrix[pr][pc], isPad: true };
+        }
+        return { val: 0, isPad: true };
+    }
+
+    // --- RENDER CHAPTER TABS ---
+    function buildChapterNav() {
+        chapterBar.innerHTML = '';
+        CHAPTERS.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = `chap-btn ${c.id === activeChap ? 'active' : ''}`;
+            btn.textContent = c.name;
+            btn.onclick = () => selectChapter(c.id);
+            chapterBar.appendChild(btn);
+        });
+    }
+
+    function selectChapter(id) {
+        activeChap = id;
+        buildChapterNav();
+        const c = CHAPTERS.find(x => x.id === id);
+        chapTitle.textContent = c.title;
+        chapDesc.textContent = c.desc;
+        chapStepBadge.textContent = `Step ${id} / 13`;
+
+        // Handle specific chapter presets
+        if (id === 9) filterSelect.value = 'mean';
+        else if (id === 10) filterSelect.value = 'sharpen';
+        else if (id === 11) filterSelect.value = 'sobelX';
+
+        if (id === 8) {
+            // Jump to corner pixel to illustrate padding clearly
+            scanR = 0; scanC = 0; subStep = 0;
+        }
+
+        filterKey = filterSelect.value;
+        renderAll();
+    }
+
+    // --- MAIN RENDER ENGINE ---
+    function renderAll() {
+        const kConfig = KERNEL_PRESETS[filterKey];
+        const weights = kConfig.weights;
+
+        // 1. Render 7x7 Input Grid
+        inputGrid.innerHTML = '';
+        for (let r = -1; r <= 5; r++) {
+            for (let c = -1; c <= 5; c++) {
+                const pInfo = getPixelVal(r, c);
+                const cell = document.createElement('div');
+                cell.className = `cell ${pInfo.isPad ? 'padded' : ''}`;
+
+                const inWinR = (r >= scanR - 1 && r <= scanR + 1);
+                const inWinC = (c >= scanC - 1 && c <= scanC + 1);
+
+                if (inWinR && inWinC) cell.classList.add('in-window');
+                if (r === scanR && c === scanC) cell.classList.add('center-cell');
+
+                // Active pairwise multiplication cell highlight
+                if (subStep >= 1 && subStep <= 9) {
+                    const activeIdx = subStep - 1;
+                    const kr = Math.floor(activeIdx / 3);
+                    const kc = activeIdx % 3;
+                    if (r === scanR + (kr - 1) && c === scanC + (kc - 1)) {
+                        cell.classList.add('active-mult');
+                    }
+                }
+
+                cell.style.backgroundColor = pInfo.isPad ? '' : `rgb(${pInfo.val},${pInfo.val},${pInfo.val})`;
+                cell.style.color = pInfo.isPad ? 'var(--pad-color)' : (pInfo.val > 128 ? '#000' : '#fff');
+                cell.innerHTML = `<span class="cell-sub">${pInfo.isPad ? 'PAD' : `(${r},${c})`}</span><span>${pInfo.val}</span>`;
+
+                if (!pInfo.isPad) {
+                    cell.onclick = () => {
+                        pause();
+                        scanR = r; scanC = c; subStep = 0;
+                        renderAll();
+                    };
+                }
+                inputGrid.appendChild(cell);
+            }
+        }
+
+        // 2. Render 3x3 Pipeline Neighborhood, Kernel, and Pairwise Products
+        neighGrid.innerHTML = '';
+        kernelGrid.innerHTML = '';
+        prodGrid.innerHTML = '';
+
+        let totalSum = 0;
+        let termsList = [];
+
+        for (let kr = 0; kr < 3; kr++) {
+            for (let kc = 0; kc < 3; kc++) {
+                const idx = kr * 3 + kc;
+                const ir = scanR + (kr - 1);
+                const ic = scanC + (kc - 1);
+                const pInfo = getPixelVal(ir, ic);
+                const w = weights[kr][kc];
+                const prod = pInfo.val * w;
+
+                totalSum += prod;
+                termsList.push({ f: pInfo.val, w: w, prod: prod, isPad: pInfo.isPad });
+
+                // Highlight active sub-step cell
+                const isCurrentPair = (subStep === idx + 1);
+
+                // Neighborhood Cell
+                const nc = document.createElement('div');
+                nc.className = `cell ${pInfo.isPad ? 'padded' : ''} ${isCurrentPair ? 'active-mult' : ''}`;
+                nc.style.backgroundColor = pInfo.isPad ? '' : `rgb(${pInfo.val},${pInfo.val},${pInfo.val})`;
+                nc.style.color = pInfo.isPad ? 'var(--pad-color)' : (pInfo.val > 128 ? '#000' : '#fff');
+                nc.innerHTML = `<span class="cell-sub">f(${kr},${kc})</span><span>${pInfo.val}</span>`;
+                neighGrid.appendChild(nc);
+
+                // Kernel Cell
+                const kcEl = document.createElement('div');
+                kcEl.className = `cell ${isCurrentPair ? 'active-mult' : ''}`;
+                kcEl.style.background = 'var(--kernel-bg)';
+                kcEl.style.borderColor = 'var(--kernel-color)';
+                kcEl.style.color = 'var(--kernel-color)';
+                kcEl.innerHTML = `<span class="cell-sub">w(${kr},${kc})</span><span>${w}</span>`;
+                kernelGrid.appendChild(kcEl);
+
+                // Product Cell
+                const pc = document.createElement('div');
+                pc.className = `cell ${isCurrentPair ? 'active-mult' : ''}`;
+                pc.style.background = 'var(--mult-bg)';
+                pc.style.borderColor = 'var(--mult-color)';
+                pc.style.color = 'var(--mult-color)';
+                
+                // Reveal product matrix gradually or completely
+                if (subStep >= idx + 1 || subStep >= 10) {
+                    pc.innerHTML = `<span class="cell-sub">p${idx+1}</span><span>${prod}</span>`;
+                } else {
+                    pc.innerHTML = `<span class="cell-sub">p${idx+1}</span><span>?</span>`;
+                }
+                prodGrid.appendChild(pc);
+            }
+        }
+
+        // 3. Scaled & Clamped Computation
+        const rawScaled = totalSum / (kConfig.div || 1);
+        const finalVal = Math.min(255, Math.max(0, Math.round(rawScaled + kConfig.bias)));
+
+        // Commit to output if reached subStep 11
+        if (subStep === 11) {
+            outputMatrix[scanR][scanC] = finalVal;
+        }
+
+        // 4. Render 5x5 Output Grid
+        outputGrid.innerHTML = '';
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                const val = outputMatrix[r][c];
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+
+                if (r === scanR && c === scanC) cell.classList.add('center-cell');
+                if (val !== null) {
+                    cell.classList.add('computed');
+                    cell.style.backgroundColor = `rgb(${val},${val},${val})`;
+                    cell.style.color = val > 128 ? '#000' : '#fff';
+                    cell.innerHTML = `<span class="cell-sub">g(${r},${c})</span><span>${val}</span>`;
+                } else {
+                    cell.innerHTML = `<span class="cell-sub">g(${r},${c})</span><span>?</span>`;
+                }
+                outputGrid.appendChild(cell);
+            }
+        }
+
+        // 5. Update Status & Accumulator Card
+        subStepStatus.textContent = `Target: g(${scanR},${scanC}) | Sub-step: ${subStep} / 11`;
+
+        let sumTermsHTML = termsList.map((t, i) => {
+            let cls = (subStep === i + 1) ? 'hl-m' : '';
+            return `<span class="${cls}">${t.f}×${t.w}</span>`;
+        }).join(' + ');
+
+        summationCard.innerHTML = `
+            <div class="sum-line">
+                <strong>1. Pairwise Sum:</strong>
+                <span>${sumTermsHTML} = <span class="hl-m">${totalSum}</span></span>
+            </div>
+            <div class="sum-line">
+                <strong>2. Divisor & Bias:</strong>
+                <span>(${totalSum} / ${kConfig.div}) + ${kConfig.bias} = <strong>${(rawScaled + kConfig.bias).toFixed(2)}</strong></span>
+            </div>
+            <div class="sum-line">
+                <strong>3. Output Pixel Intensity:</strong>
+                <span>Clamp(${(rawScaled + kConfig.bias).toFixed(2)}) ➔ <span class="hl-s">g(${scanR},${scanC}) = ${finalVal}</span></span>
+            </div>
+        `;
+
+        // 6. Mathematical Inspector Breakdown
+        mathInspector.innerHTML = `
+            <div class="math-step-title">STEP-BY-STEP MATHEMATICAL FORMULA READOUT</div>
+            <div><strong>Step 1 (Neighborhood):</strong> N(${scanR},${scanC}) extracted with <span class="hl-p">${padMode.toUpperCase()}</span> padding.</div>
+            <div><strong>Step 2 (Kernel Mask):</strong> Preset = <span class="hl-k">${filterKey.toUpperCase()}</span> (Divisor = ${kConfig.div}, Bias = ${kConfig.bias})</div>
+            <div><strong>Step 3 (Convolve Sum):</strong> ∑∑ w(s,t)f(x+s,y+t) = <span class="hl-m">${totalSum}</span></div>
+            <div><strong>Step 4 (Normalize):</strong> [ ${totalSum} / ${kConfig.div} ] + ${kConfig.bias} = <span class="hl-s">${(rawScaled + kConfig.bias).toFixed(2)}</span></div>
+            <div><strong>Step 5 (Final Scalar):</strong> g(${scanR},${scanC}) = <span class="hl-c">${finalVal}</span></div>
+        `;
+
+        renderCanvases();
+    }
+
+    // --- REAL IMAGE CANVAS INSPECTOR ---
+    function renderCanvases() {
+        const W = 120, H = 90;
+        const srcData = ctxSrc.createImageData(W, H);
+        const dstData = ctxDst.createImageData(W, H);
+
+        const kConfig = KERNEL_PRESETS[filterKey];
+        const weights = kConfig.weights;
+
+        // Generate synthetic geometric test pattern
+        const grayBuf = new Uint8ClampedArray(W * H);
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                let v = (x < 60) ? (y % 16 < 8 ? 40 : 200) : (x % 20 < 10 ? 50 : 220);
+                grayBuf[y * W + x] = v;
+
+                const idx = (y * W + x) * 4;
+                srcData.data[idx] = v;
+                srcData.data[idx+1] = v;
+                srcData.data[idx+2] = v;
+                srcData.data[idx+3] = 255;
+            }
+        }
+        ctxSrc.putImageData(srcData, 0, 0);
+
+        // Convolution loop for Canvas
+        function getCPixel(x, y) {
+            if (x >= 0 && x < W && y >= 0 && y < H) return grayBuf[y * W + x];
+            if (padMode === 'zero') return 0;
+            let px = Math.max(0, Math.min(W - 1, x));
+            let py = Math.max(0, Math.min(H - 1, y));
+            return grayBuf[py * W + px];
+        }
+
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                let s = 0;
+                for (let kr = 0; kr < 3; kr++) {
+                    for (let kc = 0; kc < 3; kc++) {
+                        s += getCPixel(x + kc - 1, y + kr - 1) * weights[kr][kc];
+                    }
+                }
+                let res = Math.min(255, Math.max(0, Math.round((s / kConfig.div) + kConfig.bias)));
+                const idx = (y * W + x) * 4;
+                dstData.data[idx] = res;
+                dstData.data[idx+1] = res;
+                dstData.data[idx+2] = res;
+                dstData.data[idx+3] = 255;
+            }
+        }
+        ctxDst.putImageData(dstData, 0, 0);
+    }
+
+    // --- STEP CONTROLLER ---
+    function stepForward() {
+        subStep++;
+        if (subStep > 11) {
+            subStep = 0;
+            scanC++;
+            if (scanC >= 5) {
+                scanC = 0;
+                scanR++;
+            }
+            if (scanR >= 5) {
+                pause();
+                scanR = 4;
+                scanC = 4;
+                subStep = 11;
+            }
+        }
+        renderAll();
+    }
+
+    function stepBackward() {
+        subStep--;
+        if (subStep < 0) {
+            subStep = 11;
+            scanC--;
+            if (scanC < 0) {
+                scanC = 4;
+                scanR--;
+            }
+            if (scanR < 0) {
+                scanR = 0;
+                scanC = 0;
+                subStep = 0;
+            }
+        }
+        renderAll();
+    }
+
+    function play() {
+        if (isPlaying) return;
+        isPlaying = true;
+        btnPlay.textContent = '❚❚ Pause';
+        btnPlay.className = 'btn btn-danger';
+        playTimer = setInterval(() => {
+            stepForward();
+        }, stepDelay);
+    }
+
+    function pause() {
+        isPlaying = false;
+        clearInterval(playTimer);
+        btnPlay.textContent = '▶ Play';
+        btnPlay.className = 'btn btn-primary';
+    }
+
+    function reset() {
+        pause();
+        scanR = 0; scanC = 0; subStep = 0;
+        outputMatrix = [
+            [null, null, null, null, null],
+            [null, null, null, null, null],
+            [null, null, null, null, null],
+            [null, null, null, null, null],
+            [null, null, null, null, null]
+        ];
+        renderAll();
+    }
+
+    // --- LISTENERS ---
+    btnPlay.addEventListener('click', () => isPlaying ? pause() : play());
+    btnNext.addEventListener('click', () => { pause(); stepForward(); });
+    btnPrev.addEventListener('click', () => { pause(); stepBackward(); });
+    btnReset.addEventListener('click', reset);
+
+    speedRange.addEventListener('input', (e) => {
+        stepDelay = parseInt(e.target.value);
+        if (isPlaying) { pause(); play(); }
+    });
+
+    filterSelect.addEventListener('change', (e) => {
+        filterKey = e.target.value;
+        reset();
+    });
+
+    paddingSelect.addEventListener('change', (e) => {
+        padMode = e.target.value;
+        reset();
+    });
+
+    // INIT
+    buildChapterNav();
+    selectChapter(1);
+</script>
+</body>
+</html>

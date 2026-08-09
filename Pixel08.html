@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Log Transformation — 3×3 Point Processing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #111827 100%);
+            color: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 12px;
+        }
+
+        .container {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            max-width: 600px;
+            width: 100%;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 12px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .formula-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* Slider Control */
+        .control-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #d1d5db;
+            font-weight: 500;
+        }
+
+        .slider-label span {
+            color: #38bdf8;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #374151;
+            border-radius: 4px;
+            outline: none;
+            accent-color: #38bdf8;
+        }
+
+        /* Responsive Matrices Grid */
+        .workbench {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        @media (max-width: 420px) {
+            .workbench {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .op-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        .matrix-box {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 14px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 220px;
+            width: 100%;
+        }
+
+        .matrix-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+
+        .pixel-cell {
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #374151;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .pixel-cell.active {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .cell-coord {
+            font-size: 8px;
+            opacity: 0.75;
+            font-weight: 600;
+        }
+
+        .cell-val {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .op-arrow {
+            font-size: 20px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        /* Detail Breakdown Card */
+        .analysis-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .analysis-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #818cf8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .math-breakdown {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #f3f4f6;
+            background: #1f2937;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 3px solid #38bdf8;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .note-text {
+            font-size: 11px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .hl-r { color: #f43f5e; font-weight: bold; }
+        .hl-s { color: #4ade80; font-weight: bold; }
+
+        /* Graph Canvas Container */
+        .graph-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 150px;
+            display: block;
+        }
+
+        /* Mobile Action Buttons */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-secondary {
+            background: #374151;
+            color: #e5e7eb;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">Log Transformation</div>
+            <div class="subtitle">Expands Dark Pixels & Compresses Bright Pixels</div>
+            <div class="formula-badge">s = c · ln(1 + r)</div>
+        </div>
+
+        <!-- Scale Constant Control -->
+        <div class="control-card">
+            <div class="slider-label">
+                <span>Scaling Constant (c):</span>
+                <span id="cValueDisplay">45.98</span>
+            </div>
+            <input type="range" id="cSlider" min="10" max="80" step="0.5" value="45.98">
+            <div style="font-size: 10px; color: #6b7280; display: flex; justify-content: space-between;">
+                <span>Low Compression</span>
+                <span>Default (c ≈ 255/ln(256))</span>
+                <span>High Boost</span>
+            </div>
+        </div>
+
+        <!-- 3x3 Matrices Display -->
+        <div class="workbench">
+            <!-- Input Grid -->
+            <div class="matrix-box">
+                <div class="matrix-title">Input R = f(x,y)</div>
+                <div class="grid-3x3" id="inputGrid"></div>
+            </div>
+
+            <div class="op-arrow">➔</div>
+
+            <!-- Output Grid -->
+            <div class="matrix-box">
+                <div class="matrix-title">Output S = g(x,y)</div>
+                <div class="grid-3x3" id="outputGrid"></div>
+            </div>
+        </div>
+
+        <!-- Analytical Inspector -->
+        <div class="analysis-card">
+            <div class="analysis-title">Pixel Breakdown Inspector</div>
+            <div class="math-breakdown" id="mathBreakdown">
+                Tap any pixel in the 3×3 grid to inspect
+            </div>
+            <div class="note-text" id="noteText">
+                <strong>Student Insight:</strong> Log transformation stretches low dark intensity values ($r < 50$) over a much wider output range, revealing hidden shadow details!
+            </div>
+        </div>
+
+        <!-- Interactive Canvas Graph -->
+        <div class="graph-card">
+            <div class="matrix-title">Curve T(r) vs Identity Line</div>
+            <canvas id="graphCanvas"></canvas>
+        </div>
+
+        <!-- Touch Controls -->
+        <div class="btn-grid">
+            <button class="btn btn-primary" id="btnAnimate">▶ Scan Matrix</button>
+            <button class="btn btn-secondary" id="btnPresetDark">🌑 Dark Shadows</button>
+            <button class="btn btn-secondary" id="btnPresetGradient">📊 Grayscale Ramp</button>
+            <button class="btn btn-secondary" id="btnRandom">🎲 Random Pixels</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Initial dark image matrix (ideal to show log transformation effect)
+            let matrixR = [
+                [ 2,   8,  18],
+                [ 32, 50,  75],
+                [110, 160, 255]
+            ];
+
+            let cVal = 45.9859; // Default c = 255 / ln(1 + 255)
+            let activeRow = 0;
+            let activeCol = 0;
+            let isAnimating = false;
+
+            const inputGrid = document.getElementById('inputGrid');
+            const outputGrid = document.getElementById('outputGrid');
+            const mathBreakdown = document.getElementById('mathBreakdown');
+            const noteText = document.getElementById('noteText');
+            const cSlider = document.getElementById('cSlider');
+            const cValueDisplay = document.getElementById('cValueDisplay');
+            const graphCanvas = document.getElementById('graphCanvas');
+            const ctx = graphCanvas.getContext('2d');
+
+            function init() {
+                resizeCanvas();
+                renderGrids();
+                selectPixel(0, 0);
+            }
+
+            // Calculate Log Output: s = c * ln(1 + r)
+            function logTransform(r, c) {
+                const s = c * Math.log(1 + r);
+                return Math.min(255, Math.max(0, Math.round(s)));
+            }
+
+            function renderGrids() {
+                inputGrid.innerHTML = '';
+                outputGrid.innerHTML = '';
+
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        const valR = matrixR[r][c];
+                        const valS = logTransform(valR, cVal);
+
+                        const cellR = createCell(r, c, valR, true);
+                        const cellS = createCell(r, c, valS, false);
+
+                        inputGrid.appendChild(cellR);
+                        outputGrid.appendChild(cellS);
+                    }
+                }
+            }
+
+            function createCell(row, col, val, isInput) {
+                const cell = document.createElement('div');
+                cell.className = 'pixel-cell';
+                if (row === activeRow && col === activeCol) {
+                    cell.classList.add('active');
+                }
+
+                cell.style.backgroundColor = `rgb(${val}, ${val}, ${val})`;
+                cell.style.color = val > 128 ? '#000000' : '#ffffff';
+
+                const coord = document.createElement('div');
+                coord.className = 'cell-coord';
+                coord.textContent = `(${row},${col})`;
+
+                const valDisplay = document.createElement('div');
+                valDisplay.className = 'cell-val';
+                valDisplay.textContent = val;
+
+                cell.appendChild(coord);
+                cell.appendChild(valDisplay);
+
+                // Touch and click handlers
+                cell.addEventListener('click', () => {
+                    if (!isAnimating) selectPixel(row, col);
+                });
+
+                return cell;
+            }
+
+            function selectPixel(row, col) {
+                activeRow = row;
+                activeCol = col;
+
+                const inputCells = inputGrid.children;
+                const outputCells = outputGrid.children;
+
+                for (let i = 0; i < 9; i++) {
+                    inputCells[i].classList.remove('active');
+                    outputCells[i].classList.remove('active');
+                }
+
+                const index = row * 3 + col;
+                if (inputCells[index]) inputCells[index].classList.add('active');
+                if (outputCells[index]) outputCells[index].classList.add('active');
+
+                const rVal = matrixR[row][col];
+                const sVal = logTransform(rVal, cVal);
+                const expansionRatio = rVal > 0 ? (sVal / rVal).toFixed(1) : '∞';
+
+                mathBreakdown.innerHTML = `
+                    Pos (${row},${col}): r = <span class="hl-r">${rVal}</span> ➔ s = ${cVal.toFixed(1)} · ln(1 + <span class="hl-r">${rVal}</span>) = <span class="hl-s">${sVal}</span>
+                `;
+
+                if (rVal < 50) {
+                    noteText.innerHTML = `
+                        <strong>High Dynamic Expansion:</strong> Dark input <span class="hl-r">${rVal}</span> is boosted <strong>${expansionRatio}×</strong> to bright output <span class="hl-s">${sVal}</span>.
+                    `;
+                } else if (rVal > 180) {
+                    noteText.innerHTML = `
+                        <strong>High Range Compression:</strong> Bright input <span class="hl-r">${rVal}</span> is compressed to <span class="hl-s">${sVal}</span> (slight change).
+                    `;
+                } else {
+                    noteText.innerHTML = `
+                        <strong>Moderate Expansion:</strong> Mid-tone <span class="hl-r">${rVal}</span> mapped to <span class="hl-s">${sVal}</span>.
+                    `;
+                }
+
+                drawGraph();
+            }
+
+            function drawGraph() {
+                const rect = graphCanvas.getBoundingClientRect();
+                const w = graphCanvas.width;
+                const h = graphCanvas.height;
+                const pad = 25;
+
+                ctx.clearRect(0, 0, w, h);
+
+                const gw = w - pad * 2;
+                const gh = h - pad * 2;
+
+                // Axes Box
+                ctx.strokeStyle = '#374151';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pad, pad, gw, gh);
+
+                // Reference Identity Line (s = r)
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = '#4b5563';
+                ctx.beginPath();
+                ctx.moveTo(pad, h - pad);
+                ctx.lineTo(w - pad, pad);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Log Curve s = c * ln(1 + r)
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                for (let r = 0; r <= 255; r++) {
+                    const s = logTransform(r, cVal);
+                    const x = pad + (r / 255) * gw;
+                    const y = (h - pad) - (s / 255) * gh;
+
+                    if (r === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Highlight Current Pixel
+                const rVal = matrixR[activeRow][activeCol];
+                const sVal = logTransform(rVal, cVal);
+
+                const cx = pad + (rVal / 255) * gw;
+                const cy = (h - pad) - (sVal / 255) * gh;
+
+                // Projection Dotted Lines
+                ctx.setLineDash([2, 2]);
+                ctx.strokeStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.moveTo(cx, h - pad);
+                ctx.lineTo(cx, cy);
+                ctx.lineTo(pad, cy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Point Circle
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Axis Labels
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '9px Inter';
+                ctx.fillText('0', pad - 8, h - pad + 10);
+                ctx.fillText('255 (r)', w - pad - 15, h - pad + 10);
+                ctx.fillText('255 (s)', pad - 12, pad - 4);
+            }
+
+            function resizeCanvas() {
+                const rect = graphCanvas.parentElement.getBoundingClientRect();
+                graphCanvas.width = rect.width - 24;
+                graphCanvas.height = 150;
+            }
+
+            // Event Listeners
+            cSlider.addEventListener('input', (e) => {
+                cVal = parseFloat(e.target.value);
+                cValueDisplay.textContent = cVal.toFixed(2);
+                renderGrids();
+                selectPixel(activeRow, activeCol);
+            });
+
+            document.getElementById('btnAnimate').addEventListener('click', () => {
+                if (isAnimating) return;
+                isAnimating = true;
+
+                let step = 0;
+                const interval = setInterval(() => {
+                    const r = Math.floor(step / 3);
+                    const c = step % 3;
+                    selectPixel(r, c);
+                    step++;
+
+                    if (step >= 9) {
+                        clearInterval(interval);
+                        isAnimating = false;
+                    }
+                }, 450);
+            });
+
+            document.getElementById('btnPresetDark').addEventListener('click', () => {
+                matrixR = [
+                    [ 1,  5, 12],
+                    [20, 35, 50],
+                    [65, 80, 95]
+                ];
+                renderGrids();
+                selectPixel(0, 0);
+            });
+
+            document.getElementById('btnPresetGradient').addEventListener('click', () => {
+                matrixR = [
+                    [ 0,  32,  64],
+                    [96, 128, 160],
+                    [192, 224, 255]
+                ];
+                renderGrids();
+                selectPixel(1, 1);
+            });
+
+            document.getElementById('btnRandom').addEventListener('click', () => {
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        matrixR[r][c] = Math.floor(Math.random() * 256);
+                    }
+                }
+                renderGrids();
+                selectPixel(activeRow, activeCol);
+            });
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawGraph();
+            });
+
+            // Init App
+            init();
+        })();
+    </script>
+</body>
+</html>

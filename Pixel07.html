@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Negative Transformation — 3×3 Point Processing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            max-width: 960px;
+            width: 100%;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 16px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .concept-badge {
+            display: inline-block;
+            background: rgba(244, 63, 94, 0.15);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        /* Grid Layout for Matrices */
+        .workbench {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .workbench {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .matrix-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .matrix-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        .grid-3x3 {
+            display: grid;
+            grid-template-columns: repeat(3, 72px);
+            grid-template-rows: repeat(3, 72px);
+            gap: 8px;
+        }
+
+        .pixel-cell {
+            width: 72px;
+            height: 72px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border: 2px solid #334155;
+            user-select: none;
+            position: relative;
+        }
+
+        .pixel-cell:hover {
+            transform: scale(1.08);
+            z-index: 10;
+            border-color: #38bdf8;
+        }
+
+        .pixel-cell.active {
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 16px rgba(244, 63, 94, 0.6);
+            transform: scale(1.08);
+            z-index: 20;
+        }
+
+        .cell-coord {
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+
+        .cell-val {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        /* Transformation Operator Panel */
+        .operator-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .op-arrow {
+            font-size: 24px;
+            color: #f43f5e;
+            font-weight: bold;
+        }
+
+        .op-box {
+            background: #1e293b;
+            border: 1px solid #f43f5e;
+            border-radius: 12px;
+            padding: 12px 16px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(244, 63, 94, 0.2);
+        }
+
+        .op-title {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .op-formula {
+            font-family: 'Courier New', monospace;
+            font-size: 15px;
+            font-weight: bold;
+            color: #f43f5e;
+            margin-top: 4px;
+        }
+
+        /* Detail & Explanation Section */
+        .analysis-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .analysis-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step-math {
+            font-family: 'Courier New', monospace;
+            font-size: 15px;
+            color: #f8fafc;
+            background: #1e293b;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border-left: 4px solid #f43f5e;
+        }
+
+        .step-note {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .highlight-r { color: #38bdf8; font-weight: bold; }
+        .highlight-s { color: #4ade80; font-weight: bold; }
+        .highlight-neg { color: #f43f5e; font-weight: bold; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(244, 63, 94, 0.4);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+            color: white;
+        }
+
+        /* Plot Graph Canvas */
+        .graph-container {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">Image Negative Transformation</div>
+            <div class="subtitle">3 × 3 Matrix Point Processing Visualizer</div>
+            <div class="concept-badge">Formula: s = (L - 1) - r = 255 - r</div>
+        </div>
+
+        <!-- 3x3 Matrices Workbench -->
+        <div class="workbench">
+            <!-- Input 3x3 Grid -->
+            <div class="matrix-card">
+                <div class="matrix-title">Input Matrix R = f(x,y)</div>
+                <div class="grid-3x3" id="inputGrid"></div>
+            </div>
+
+            <!-- Transformation Operator -->
+            <div class="operator-panel">
+                <div class="op-arrow">➔</div>
+                <div class="op-box">
+                    <div class="op-title">Point Operation</div>
+                    <div class="op-formula">s = 255 - r</div>
+                </div>
+                <div class="op-arrow">➔</div>
+            </div>
+
+            <!-- Output 3x3 Grid -->
+            <div class="matrix-card">
+                <div class="matrix-title">Negative Matrix S = g(x,y)</div>
+                <div class="grid-3x3" id="outputGrid"></div>
+            </div>
+        </div>
+
+        <!-- Step Analysis -->
+        <div class="analysis-card">
+            <div class="analysis-header">Pixel Transformation Breakdown</div>
+            <div class="step-math" id="stepMath">
+                Hover or click any cell in the matrix to inspect its transformation!
+            </div>
+            <div class="step-note" id="stepNote">
+                <strong>Key Concept for Students:</strong> Notice that transforming pixel <span class="highlight-r">r</span> into <span class="highlight-s">s</span> depends <em>exclusively</em> on its own intensity level. The 8 neighboring pixels in the 3×3 matrix do <strong>NOT</strong> affect the calculation!
+            </div>
+        </div>
+
+        <!-- Linear Graph Canvas -->
+        <div class="graph-container">
+            <div class="matrix-title" style="margin-bottom: 8px;">Transformation Curve T(r)</div>
+            <canvas id="graphCanvas" width="380" height="180"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-primary" id="btnAnimate">▶ Step-by-Step Animation</button>
+            <button class="btn btn-secondary" id="btnRandom">🎲 Randomize Inputs</button>
+            <button class="btn btn-secondary" id="btnPresetGradient">📊 Preset: Gradient</button>
+            <button class="btn btn-secondary" id="btnPresetChecker">🏁 Preset: High Contrast</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Initial 3x3 matrix intensity values (0 to 255)
+            let matrixR = [
+                [ 15, 128, 240],
+                [ 50, 200,   0],
+                [180,  90, 255]
+            ];
+
+            const L = 256; // 8-bit image intensity levels
+            let activeRow = 1;
+            let activeCol = 1;
+            let isAnimating = false;
+
+            const inputGrid = document.getElementById('inputGrid');
+            const outputGrid = document.getElementById('outputGrid');
+            const stepMath = document.getElementById('stepMath');
+            const stepNote = document.getElementById('stepNote');
+            const graphCanvas = document.getElementById('graphCanvas');
+            const ctx = graphCanvas.getContext('2d');
+
+            // Initialize App
+            function init() {
+                renderGrids();
+                selectPixel(1, 1);
+                drawGraph();
+            }
+
+            // Render Input and Output 3x3 Matrices
+            function renderGrids() {
+                inputGrid.innerHTML = '';
+                outputGrid.innerHTML = '';
+
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        const valR = matrixR[r][c];
+                        const valS = (L - 1) - valR; // Image Negative Formula: 255 - r
+
+                        // Create Input Pixel Cell
+                        const cellR = createCell(r, c, valR, true);
+                        // Create Output Pixel Cell
+                        const cellS = createCell(r, c, valS, false);
+
+                        inputGrid.appendChild(cellR);
+                        outputGrid.appendChild(cellS);
+                    }
+                }
+            }
+
+            // Helper to build DOM cell
+            function createCell(row, col, val, isInput) {
+                const cell = document.createElement('div');
+                cell.className = 'pixel-cell';
+                if (row === activeRow && col === activeCol) {
+                    cell.classList.add('active');
+                }
+
+                // Dynamic background color based on grayscale intensity
+                cell.style.backgroundColor = `rgb(${val}, ${val}, ${val})`;
+                
+                // Adjust text color for readability against background
+                const textColor = val > 128 ? '#000000' : '#ffffff';
+                cell.style.color = textColor;
+
+                const coord = document.createElement('div');
+                coord.className = 'cell-coord';
+                coord.textContent = `(${row},${col})`;
+
+                const valDisplay = document.createElement('div');
+                valDisplay.className = 'cell-val';
+                valDisplay.textContent = val;
+
+                cell.appendChild(coord);
+                cell.appendChild(valDisplay);
+
+                // Add Hover/Click listeners
+                cell.addEventListener('mouseenter', () => {
+                    if (!isAnimating) selectPixel(row, col);
+                });
+                cell.addEventListener('click', () => {
+                    if (!isAnimating) {
+                        // Allow user to edit pixel on click
+                        const newVal = prompt(`Enter new pixel intensity for position (${row},${col}) [0 - 255]:`, matrixR[row][col]);
+                        if (newVal !== null && !isNaN(newVal)) {
+                            const parsed = Math.min(255, Math.max(0, parseInt(newVal, 10)));
+                            matrixR[row][col] = parsed;
+                            renderGrids();
+                            selectPixel(row, col);
+                        }
+                    }
+                });
+
+                return cell;
+            }
+
+            // Highlight and inspect specific pixel
+            function selectPixel(row, col) {
+                activeRow = row;
+                activeCol = col;
+
+                // Update active CSS styles
+                const inputCells = inputGrid.children;
+                const outputCells = outputGrid.children;
+
+                for (let i = 0; i < 9; i++) {
+                    inputCells[i].classList.remove('active');
+                    outputCells[i].classList.remove('active');
+                }
+
+                const index = row * 3 + col;
+                if (inputCells[index]) inputCells[index].classList.add('active');
+                if (outputCells[index]) outputCells[index].classList.add('active');
+
+                // Update Mathematical Breakdown Display
+                const rVal = matrixR[row][col];
+                const sVal = 255 - rVal;
+
+                stepMath.innerHTML = `
+                    Position (${row},${col}) ➔ 
+                    r = <span class="highlight-r">${rVal}</span> &nbsp;|&nbsp; 
+                    s = 255 - <span class="highlight-r">${rVal}</span> = <span class="highlight-neg">${sVal}</span>
+                `;
+
+                stepNote.innerHTML = `
+                    <strong>Inversion Behavior:</strong> 
+                    Input value <span class="highlight-r">${rVal}</span> (${getToneName(rVal)}) 
+                    is transformed directly into <span class="highlight-neg">${sVal}</span> (${getToneName(sVal)}).
+                    <em>No neighboring cell values were used in this computation!</em>
+                `;
+
+                drawGraph();
+            }
+
+            function getToneName(val) {
+                if (val === 0) return 'Pure Black';
+                if (val === 255) return 'Pure White';
+                if (val < 80) return 'Dark Gray';
+                if (val > 180) return 'Bright Gray';
+                return 'Mid Gray';
+            }
+
+            // Draw Linear Transformation Curve s = 255 - r
+            function drawGraph() {
+                const w = graphCanvas.width;
+                const h = graphCanvas.height;
+                const pad = 30;
+
+                ctx.clearRect(0, 0, w, h);
+
+                const gw = w - pad * 2;
+                const gh = h - pad * 2;
+
+                // Draw Axes Box
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pad, pad, gw, gh);
+
+                // Axis Labels
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px Inter';
+                ctx.fillText('0', pad - 10, h - pad + 12);
+                ctx.fillText('255', w - pad - 10, h - pad + 12);
+                ctx.fillText('Input r', w / 2 - 15, h - 6);
+
+                ctx.fillText('255', pad - 22, pad + 10);
+                ctx.fillText('0', pad - 15, h - pad);
+
+                // Negative Transformation Line (from (0, 255) to (255, 0))
+                ctx.strokeStyle = '#f43f5e';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(pad, pad); // (0, 255)
+                ctx.lineTo(w - pad, h - pad); // (255, 0)
+                ctx.stroke();
+
+                // Highlight Current Selected Pixel Position
+                const rVal = matrixR[activeRow][activeCol];
+                const sVal = 255 - rVal;
+
+                const cx = pad + (rVal / 255) * gw;
+                const cy = pad + ((255 - sVal) / 255) * gh; // inverted Y
+
+                // Dotted Projection Lines
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, h - pad);
+                ctx.lineTo(cx, cy);
+                ctx.lineTo(pad, cy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Active Point Glow
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Controls & Animations
+            document.getElementById('btnAnimate').addEventListener('click', () => {
+                if (isAnimating) return;
+                isAnimating = true;
+
+                let step = 0;
+                const interval = setInterval(() => {
+                    const r = Math.floor(step / 3);
+                    const c = step % 3;
+                    selectPixel(r, c);
+                    step++;
+
+                    if (step >= 9) {
+                        clearInterval(interval);
+                        isAnimating = false;
+                    }
+                }, 600);
+            });
+
+            document.getElementById('btnRandom').addEventListener('click', () => {
+                for (let r = 0; r < 3; r++) {
+                    for (let c = 0; c < 3; c++) {
+                        matrixR[r][c] = Math.floor(Math.random() * 256);
+                    }
+                }
+                renderGrids();
+                selectPixel(activeRow, activeCol);
+            });
+
+            document.getElementById('btnPresetGradient').addEventListener('click', () => {
+                matrixR = [
+                    [ 0,  30,  60],
+                    [90, 120, 150],
+                    [180, 210, 255]
+                ];
+                renderGrids();
+                selectPixel(1, 1);
+            });
+
+            document.getElementById('btnPresetChecker').addEventListener('click', () => {
+                matrixR = [
+                    [255,   0, 255],
+                    [  0, 255,   0],
+                    [255,   0, 255]
+                ];
+                renderGrids();
+                selectPixel(1, 1);
+            });
+
+            // Start Visualizer
+            init();
+        })();
+    </script>
+</body>
+</html>

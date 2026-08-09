@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spatial Filtering Concept — Instagram Reel Explainer</title>
+  <style>
+    :root {
+      --bg-color: #07090e;
+      --card-bg: #0f1420;
+      --panel-bg: rgba(22, 29, 45, 0.85);
+      --text-main: #ffffff;
+      --text-muted: #94a3b8;
+      --cyan: #00f2fe;
+      --purple: #7000ff;
+      --pink: #ff2a6d;
+      --gold: #ffb703;
+      --green: #05ffa1;
+      --border-light: rgba(255, 255, 255, 0.12);
+      --cell-size: 42px;
+      --cell-gap: 4px;
+      --step-size: 46px; /* cell-size + cell-gap */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 9:16 Instagram Reel Frame Simulation */
+    .reel-container {
+      position: relative;
+      width: 100vw;
+      max-width: 390px;
+      height: 100vh;
+      max-height: 700px;
+      aspect-ratio: 9 / 16;
+      background: radial-gradient(circle at 50% 10%, #151c2e 0%, #07090e 100%);
+      border-radius: 24px;
+      border: 1px solid var(--border-light);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 242, 254, 0.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px 16px;
+      overflow: hidden;
+    }
+
+    /* TOP HEADER AREA */
+    .header {
+      text-align: center;
+      z-index: 10;
+      min-height: 80px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .scene-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      transition: all 0.3s ease;
+      line-height: 1.2;
+    }
+
+    .scene-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* STAGE WORKSPACE */
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    /* MATRICES DISPLAY CONTAINER */
+    .matrices-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      width: 100%;
+    }
+
+    .grid-card {
+      position: relative;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
+      transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .grid-label {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: #1a2235;
+      border: 1px solid var(--border-light);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    /* 5x5 GRID */
+    .grid-5x5 {
+      display: grid;
+      grid-template-columns: repeat(5, var(--cell-size));
+      grid-template-rows: repeat(5, var(--cell-size));
+      gap: var(--cell-gap);
+      position: relative;
+    }
+
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Courier New', Courier, monospace;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .cell.dimmed {
+      opacity: 0.25;
+      transform: scale(0.95);
+    }
+
+    .cell.center-highlight {
+      background: rgba(255, 42, 109, 0.35) !important;
+      border: 2px solid var(--pink) !important;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(ff, 42, 109, 0.6);
+      transform: scale(1.05);
+      z-index: 2;
+    }
+
+    .cell.active-mult {
+      background: rgba(5, 255, 161, 0.3) !important;
+      border: 1px solid var(--green) !important;
+      color: #ffffff;
+      transform: scale(1.08);
+    }
+
+    /* SLIDING KERNEL BOX OVERLAY */
+    .kernel-box {
+      position: absolute;
+      width: 134px; /* 3 * 42 + 2 * 4 */
+      height: 134px;
+      border: 2px solid var(--cyan);
+      background: rgba(0, 242, 254, 0.12);
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.35), inset 0 0 15px rgba(0, 242, 254, 0.15);
+      border-radius: 8px;
+      pointer-events: none;
+      top: 10px;
+      left: 10px;
+      opacity: 0;
+      transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.5s ease, opacity 0.4s ease;
+      z-index: 5;
+    }
+
+    /* KERNEL MATRIX DISPLAY (SCENE 3) */
+    .kernel-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: rgba(112, 0, 255, 0.15);
+      border: 1px solid rgba(112, 0, 255, 0.4);
+      padding: 10px;
+      border-radius: 12px;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all 0.4s ease;
+      position: absolute;
+      bottom: -10px;
+      z-index: 10;
+    }
+
+    .kernel-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .grid-3x3 {
+      display: grid;
+      grid-template-columns: repeat(3, 32px);
+      gap: 4px;
+    }
+
+    .kernel-cell {
+      width: 32px;
+      height: 32px;
+      background: rgba(112, 0, 255, 0.3);
+      border: 1px solid var(--purple);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* MATH PIPELINE DISPLAY */
+    .math-card {
+      width: 100%;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.4s ease;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .math-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .math-equation {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      text-align: center;
+      word-break: break-all;
+    }
+
+    .math-highlight {
+      color: var(--cyan);
+      font-weight: bold;
+    }
+
+    .math-result {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--green);
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .badge-output {
+      display: inline-block;
+      background: var(--green);
+      color: #000;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px rgba(5, 255, 161, 0.5);
+    }
+
+    /* OUTPUT GRID CONTAINER */
+    .output-card {
+      opacity: 0;
+      transform: scale(0.9);
+      transition: all 0.5s ease;
+    }
+
+    .output-card.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .cell-output {
+      background: rgba(5, 255, 161, 0.05);
+      border: 1px dashed rgba(5, 255, 161, 0.3);
+      color: rgba(255,255,255,0.3);
+    }
+
+    .cell-output.computed {
+      background: rgba(5, 255, 161, 0.3) !important;
+      border: 1px solid var(--green) !important;
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 0 10px rgba(5, 255, 161, 0.4);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); }
+      100% { transform: scale(1); }
+    }
+
+    /* FINAL RECAP OVERLAY CARD */
+    .recap-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 9, 14, 0.92);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      gap: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 20;
+    }
+
+    .recap-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .concept-box {
+      border: 2px solid var(--cyan);
+      border-radius: 16px;
+      padding: 16px 20px;
+      background: rgba(0, 242, 254, 0.05);
+      box-shadow: 0 0 30px rgba(0, 242, 254, 0.25);
+      width: 100%;
+    }
+
+    .concept-box-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .concept-box-desc {
+      font-size: 13px;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .tagline-badge {
+      background: linear-gradient(90deg, var(--pink), var(--purple));
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      box-shadow: 0 10px 20px rgba(255, 42, 109, 0.3);
+      text-transform: uppercase;
+    }
+
+    /* CONTROLS & TIMELINE FOOTER */
+    .controls-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      background: rgba(15, 20, 32, 0.7);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border-light);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      transition: width 0.1s linear;
+    }
+
+    .buttons-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-light);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .time-code {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="reel-container">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="badge">DIP Visualized</div>
+      <div class="scene-title" id="sceneTitle">SPATIAL FILTERING</div>
+      <div class="scene-subtitle" id="sceneSubtitle">Digital Image Processing Core Concept</div>
+    </div>
+
+    <!-- MAIN ANIMATION STAGE -->
+    <div class="stage">
+      
+      <div class="matrices-wrapper">
+
+        <!-- 5x5 INPUT IMAGE MATRIX -->
+        <div class="grid-card" id="inputCard">
+          <div class="grid-label">Input Image f(x,y)</div>
+          
+          <div class="grid-5x5" id="inputGrid">
+            <!-- JavaScript generates 25 cells here -->
+          </div>
+
+          <!-- ABSOLUTE OVERLAY KERNEL BOX -->
+          <div class="kernel-box" id="kernelBox"></div>
+
+          <!-- KERNEL DISPLAY (SCENE 3) -->
+          <div class="kernel-card" id="kernelCard">
+            <div style="font-size: 10px; font-weight: 800; color: var(--purple); text-transform: uppercase;">
+              3×3 Mean Kernel (Factor 1/9)
+            </div>
+            <div class="grid-3x3">
+              <div class="kernel-cell">1</div><div class="kernel-cell">1</div><div class="kernel-cell">1</div>
+              <div class="kernel-cell">1</div><div class="kernel-cell">1</div><div class="kernel-cell">1</div>
+              <div class="kernel-cell">1</div><div class="kernel-cell">1</div><div class="kernel-cell">1</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATH CALCULATION DISPLAY -->
+        <div class="math-card" id="mathCard">
+          <div class="math-equation" id="mathEq">10(1) + 20(1) + 30(1) + ...</div>
+          <div class="math-result" id="mathRes">SUM = 360 &nbsp;➔&nbsp; 360 / 9 = 40</div>
+        </div>
+
+        <!-- 5x5 OUTPUT IMAGE MATRIX -->
+        <div class="grid-card output-card" id="outputCard">
+          <div class="grid-label" style="color: var(--green);">Output Image g(x,y)</div>
+          <div class="grid-5x5" id="outputGrid">
+            <!-- JavaScript generates 25 cells here -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FINAL RECAP OVERLAY -->
+      <div class="recap-overlay" id="recapOverlay">
+        <div class="concept-box">
+          <div class="concept-box-title">Spatial Filtering</div>
+          <div class="concept-box-desc">Local Neighborhood + Kernel</div>
+        </div>
+        <div class="tagline-badge">ONE NEIGHBORHOOD → ONE OUTPUT PIXEL</div>
+      </div>
+
+    </div>
+
+    <!-- CONTROLS FOOTER -->
+    <div class="controls-bar">
+      <div class="progress-track" id="progressTrack">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="buttons-row">
+        <button class="btn" id="btnPlay">❚❚ Pause</button>
+        <span class="time-code" id="timeCode">00.0s / 28.0s</span>
+        <button class="btn" id="btnRestart">↻ Restart</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- INPUT DATA & CONSTANTS ---
+    const TOTAL_DURATION = 28.0; // Seconds
+    
+    // 5x5 Grayscale Input Matrix
+    const INPUT_MATRIX = [
+      [10,  20,  30,  40,  50],
+      [20,  40,  60,  80, 100],
+      [30,  60,  90, 120, 150],
+      [40,  80, 120, 160, 200],
+      [50, 100, 150, 200, 250]
+    ];
+
+    // DOM ELEMENTS
+    const inputGrid = document.getElementById('inputGrid');
+    const outputGrid = document.getElementById('outputGrid');
+    const kernelBox = document.getElementById('kernelBox');
+    const kernelCard = document.getElementById('kernelCard');
+    const mathCard = document.getElementById('mathCard');
+    const mathEq = document.getElementById('mathEq');
+    const mathRes = document.getElementById('mathRes');
+    const outputCard = document.getElementById('outputCard');
+    const recapOverlay = document.getElementById('recapOverlay');
+    const sceneTitle = document.getElementById('sceneTitle');
+    const sceneSubtitle = document.getElementById('sceneSubtitle');
+    const progressFill = document.getElementById('progressFill');
+    const progressTrack = document.getElementById('progressTrack');
+    const timeCode = document.getElementById('timeCode');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnRestart = document.getElementById('btnRestart');
+
+    // APP STATE
+    let currentTime = 0;
+    let isPlaying = true;
+    let lastTimestamp = null;
+
+    // --- INITIALIZE DOM GRID CELLS ---
+    function initGrids() {
+      inputGrid.innerHTML = '';
+      outputGrid.innerHTML = '';
+
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const val = INPUT_MATRIX[r][c];
+          
+          // Input Cell
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.id = `in-cell-${r}-${c}`;
+          cell.textContent = val;
+          // Set background brightness based on value
+          cell.style.backgroundColor = `rgba(255, 255, 255, ${val / 300 + 0.05})`;
+          inputGrid.appendChild(cell);
+
+          // Output Cell
+          const outCell = document.createElement('div');
+          outCell.className = 'cell cell-output';
+          outCell.id = `out-cell-${r}-${c}`;
+          outCell.textContent = '';
+          outputGrid.appendChild(outCell);
+        }
+      }
+    }
+
+    // --- MAIN TIMELINE CONTROL (0s to 28s) ---
+    function updateTimeline(t) {
+      // 1. Scene 1: INPUT IMAGE (0.0s - 3.5s)
+      if (t < 3.5) {
+        sceneTitle.textContent = "SPATIAL FILTERING";
+        sceneSubtitle.textContent = "Digital Image Processing Concept";
+        
+        resetCells();
+        kernelBox.style.opacity = '0';
+        kernelCard.classList.remove('visible');
+        mathCard.classList.remove('visible');
+        outputCard.classList.remove('visible');
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 2. Scene 2: NEIGHBORHOOD (3.5s - 7.5s)
+      else if (t < 7.5) {
+        sceneTitle.textContent = "1. NEIGHBORHOOD";
+        sceneSubtitle.textContent = "Look at the 3×3 pixel neighborhood";
+
+        setNeighborhoodHighlight(0, 0); // Center at (1,1)
+        kernelBox.style.opacity = '1';
+        kernelBox.style.top = '10px';
+        kernelBox.style.left = '10px';
+
+        kernelCard.classList.remove('visible');
+        mathCard.classList.remove('visible');
+        outputCard.classList.remove('visible');
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 3. Scene 3: KERNEL (7.5s - 11.5s)
+      else if (t < 11.5) {
+        sceneTitle.textContent = "2. APPLY KERNEL";
+        sceneSubtitle.textContent = "Overlays 3×3 Mean Filter (Factor 1/9)";
+
+        setNeighborhoodHighlight(0, 0);
+        kernelBox.style.opacity = '1';
+        kernelBox.style.top = '10px';
+        kernelBox.style.left = '10px';
+
+        kernelCard.classList.add('visible');
+        mathCard.classList.remove('visible');
+        outputCard.classList.remove('visible');
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 4. Scene 4: MULTIPLY (11.5s - 16.5s)
+      else if (t < 16.5) {
+        sceneTitle.textContent = "3. MULTIPLY";
+        sceneSubtitle.textContent = "Multiply pixel values by kernel weights";
+
+        setNeighborhoodHighlight(0, 0);
+        kernelCard.classList.remove('visible');
+        
+        mathCard.classList.add('visible');
+        mathEq.innerHTML = `10(1)+20(1)+30(1)+<br>20(1)+<span class="math-highlight">40(1)</span>+60(1)+<br>30(1)+60(1)+90(1)`;
+        mathRes.innerHTML = `<span style="color:var(--cyan);">PAIRWISE PRODUCTS</span>`;
+
+        outputCard.classList.remove('visible');
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 5. Scene 5: SUM & DIVIDE (16.5s - 20.5s)
+      else if (t < 20.5) {
+        sceneTitle.textContent = "4. SUM & DIVIDE";
+        sceneSubtitle.textContent = "Sum products and divide by 9";
+
+        setNeighborhoodHighlight(0, 0);
+        mathCard.classList.add('visible');
+        mathEq.innerHTML = `SUM = 10+20+30+20+40+60+30+60+90 = <b>360</b>`;
+        mathRes.innerHTML = `360 ÷ 9 = <span class="badge-output">OUTPUT = 40</span>`;
+
+        outputCard.classList.add('visible');
+        setComputedOutput(1, 1, 40);
+
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 6. Scene 6: SLIDE KERNEL (20.5s - 24.5s)
+      else if (t < 24.5) {
+        sceneTitle.textContent = "5. SLIDE KERNEL";
+        sceneSubtitle.textContent = "Kernel slides → Calculates next pixel";
+
+        outputCard.classList.add('visible');
+
+        if (t < 22.5) {
+          // Position 2: Shift right 1 cell (center at (1,2))
+          setNeighborhoodHighlight(0, 1);
+          kernelBox.style.opacity = '1';
+          kernelBox.style.top = '10px';
+          kernelBox.style.left = '56px'; // 10px + 46px step
+
+          mathCard.classList.add('visible');
+          mathEq.innerHTML = `20+30+40 + 40+60+80 + 60+90+120 = <b>540</b>`;
+          mathRes.innerHTML = `540 ÷ 9 = <span class="badge-output">OUTPUT = 60</span>`;
+
+          setComputedOutput(1, 1, 40);
+          setComputedOutput(1, 2, 60);
+        } else {
+          // Position 3: Shift right 2 cells (center at (1,3))
+          setNeighborhoodHighlight(0, 2);
+          kernelBox.style.opacity = '1';
+          kernelBox.style.top = '10px';
+          kernelBox.style.left = '102px'; // 10px + 2 * 46px step
+
+          mathCard.classList.add('visible');
+          mathEq.innerHTML = `30+40+50 + 60+80+100 + 90+120+150 = <b>720</b>`;
+          mathRes.innerHTML = `720 ÷ 9 = <span class="badge-output">OUTPUT = 80</span>`;
+
+          setComputedOutput(1, 1, 40);
+          setComputedOutput(1, 2, 60);
+          setComputedOutput(1, 3, 80);
+        }
+
+        recapOverlay.classList.remove('visible');
+      }
+
+      // 7. FINAL SCENE: RECAP SUMMARY (24.5s - 28.0s)
+      else {
+        sceneTitle.textContent = "SPATIAL FILTERING";
+        sceneSubtitle.textContent = "Core Takeaway";
+
+        recapOverlay.classList.add('visible');
+      }
+    }
+
+    // --- HELPER FUNCTIONS FOR CELL HIGHLIGHTING ---
+    function resetCells() {
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const inCell = document.getElementById(`in-cell-${r}-${c}`);
+          if (inCell) inCell.className = 'cell';
+        }
+      }
+    }
+
+    function setNeighborhoodHighlight(startRow, startCol) {
+      resetCells();
+      
+      const centerR = startRow + 1;
+      const centerC = startCol + 1;
+
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const inCell = document.getElementById(`in-cell-${r}-${c}`);
+          if (!inCell) continue;
+
+          const inRow = (r >= startRow && r <= startRow + 2);
+          const inCol = (c >= startCol && c <= startCol + 2);
+
+          if (inRow && inCol) {
+            if (r === centerR && c === centerC) {
+              inCell.classList.add('center-highlight');
+            } else {
+              inCell.classList.add('active-mult');
+            }
+          } else {
+            inCell.classList.add('dimmed');
+          }
+        }
+      }
+    }
+
+    function setComputedOutput(r, c, val) {
+      const outCell = document.getElementById(`out-cell-${r}-${c}`);
+      if (outCell && !outCell.classList.contains('computed')) {
+        outCell.classList.add('computed');
+        outCell.textContent = val;
+      }
+    }
+
+    function clearOutputs() {
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          const outCell = document.getElementById(`out-cell-${r}-${c}`);
+          if (outCell) {
+            outCell.className = 'cell cell-output';
+            outCell.textContent = '';
+          }
+        }
+      }
+    }
+
+    // --- ANIMATION TICK LOOP ---
+    function tick(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      if (isPlaying) {
+        currentTime += delta;
+        if (currentTime >= TOTAL_DURATION) {
+          currentTime = 0; // Loop animation smoothly
+          clearOutputs();
+        }
+      }
+
+      // Render UI at currentTime
+      updateTimeline(currentTime);
+
+      // Update progress bar & timecode
+      const progressPercent = (currentTime / TOTAL_DURATION) * 100;
+      progressFill.style.width = `${progressPercent}%`;
+      timeCode.textContent = `${currentTime.toFixed(1)}s / ${TOTAL_DURATION.toFixed(1)}s`;
+
+      requestAnimationFrame(tick);
+    }
+
+    // --- EVENT LISTENERS ---
+    btnPlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      btnPlay.textContent = isPlaying ? '❚❚ Pause' : '▶ Play';
+    });
+
+    btnRestart.addEventListener('click', () => {
+      currentTime = 0;
+      clearOutputs();
+      isPlaying = true;
+      btnPlay.textContent = '❚❚ Pause';
+    });
+
+    progressTrack.addEventListener('click', (e) => {
+      const rect = progressTrack.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const fraction = clickX / rect.width;
+      currentTime = fraction * TOTAL_DURATION;
+      clearOutputs();
+      updateTimeline(currentTime);
+    });
+
+    // START ANIMATION
+    initGrids();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point Processing: Image Negative Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --primary: #38bdf8;
+            --primary-accent: #0284c7;
+            --danger: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app-container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Module 1: Single Pixel & Graph */
+        .single-pixel-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        @media (max-width: 550px) {
+            .single-pixel-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .swatch-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .swatch-pair {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .swatch-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: background-color 0.1s ease;
+        }
+
+        .slider-control {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        canvas.graph-canvas {
+            width: 100%;
+            height: 180px;
+            background: #090d16;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Module 2: Matrix Practice */
+        .matrix-layout {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 8px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            width: 180px;
+            height: 180px;
+        }
+
+        .matrix-cell {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 700;
+            user-select: none;
+            cursor: pointer;
+            transition: transform 0.1s ease, border-color 0.1s ease;
+        }
+
+        .matrix-cell:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+
+        .matrix-input-cell {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: inherit;
+            text-align: center;
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 12px;
+            outline: none;
+        }
+
+        /* Module 3: Image Inspector */
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            background: var(--border-color);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-active, .btn:hover {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .image-compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .image-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .image-view span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        canvas.img-canvas {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            object-fit: contain;
+        }
+
+        .formula-box {
+            background: #090d16;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Image Negative Practice Studio</h1>
+        <div class="subtitle">Interactive Point Processing Learning Environment</div>
+    </header>
+
+    <!-- Formula Reference -->
+    <div class="formula-box">
+        Point Processing Equation: <strong>s = T(r) = 255 - r</strong>
+    </div>
+
+    <!-- MODULE 1: Single Pixel Intuition -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 1: Single Pixel Mechanics</span>
+        </div>
+        <div class="single-pixel-layout">
+            <div class="swatch-container">
+                <div class="swatch-pair">
+                    <div class="swatch-box" id="swatchR">
+                        <span>r</span>
+                        <span id="valR">128</span>
+                    </div>
+                    <span style="font-size:20px; font-weight:bold; color:var(--primary)">➔</span>
+                    <div class="swatch-box" id="swatchS">
+                        <span>s</span>
+                        <span id="valS">127</span>
+                    </div>
+                </div>
+
+                <div class="slider-control">
+                    <label style="font-size: 12px; color: var(--text-muted);">Adjust Input Intensity (r):</label>
+                    <input type="range" id="pixelSlider" min="0" max="255" value="128">
+                </div>
+            </div>
+
+            <div>
+                <canvas id="graphCanvas" class="graph-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODULE 2: Matrix Practice -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 2: 3×3 Matrix Transformation Practice</span>
+            <button class="btn" id="btnRandomizeMatrix">Randomize Grid</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted);">
+            Click or edit any pixel value in the Input Matrix $R$ to see its corresponding Output Matrix $S$ calculated point-by-point.
+        </p>
+        <div class="matrix-layout">
+            <div>
+                <div style="font-size: 11px; text-align:center; color:var(--text-muted); margin-bottom:4px;">Input Matrix (R)</div>
+                <div class="matrix-grid" id="inputMatrixGrid"></div>
+            </div>
+            <span style="font-size:24px; font-weight:bold; color:var(--primary)">➔</span>
+            <div>
+                <div style="font-size: 11px; text-align:center; color:var(--text-muted); margin-bottom:4px;">Output Matrix (S)</div>
+                <div class="matrix-grid" id="outputMatrixGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODULE 3: Real-World Applications -->
+    <div class="card">
+        <div class="card-header">
+            <span>Module 3: Real-World Presets</span>
+        </div>
+        <div class="preset-buttons">
+            <button class="btn btn-active" id="presetXray">Medical X-Ray</button>
+            <button class="btn" id="presetFilm">Film Negative</button>
+            <button class="btn" id="presetText">Text Document</button>
+        </div>
+        <div class="image-compare-grid">
+            <div class="image-view">
+                <span>Original f(x,y)</span>
+                <canvas id="srcCanvas" class="img-canvas"></canvas>
+            </div>
+            <div class="image-view">
+                <span>Negative g(x,y)</span>
+                <canvas id="dstCanvas" class="img-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- MODULE 1: SINGLE PIXEL & GRAPH ---
+    const pixelSlider = document.getElementById('pixelSlider');
+    const swatchR = document.getElementById('swatchR');
+    const swatchS = document.getElementById('swatchS');
+    const valR = document.getElementById('valR');
+    const valS = document.getElementById('valS');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const ctxGraph = graphCanvas.getContext('2d');
+
+    function updateSinglePixel(r) {
+        const s = 255 - r;
+        valR.textContent = r;
+        valS.textContent = s;
+
+        swatchR.style.backgroundColor = `rgb(${r},${r},${r})`;
+        swatchR.style.color = r > 128 ? '#000' : '#fff';
+
+        swatchS.style.backgroundColor = `rgb(${s},${s},${s})`;
+        swatchS.style.color = s > 128 ? '#000' : '#fff';
+
+        drawGraph(r, s);
+    }
+
+    function drawGraph(activeR, activeS) {
+        const w = graphCanvas.width = graphCanvas.parentElement.clientWidth;
+        const h = graphCanvas.height = 180;
+        const pad = 30;
+
+        ctxGraph.clearRect(0, 0, w, h);
+
+        const gw = w - pad * 2;
+        const gh = h - pad * 2;
+
+        // Axes box
+        ctxGraph.strokeStyle = '#334155';
+        ctxGraph.lineWidth = 1;
+        ctxGraph.strokeRect(pad, pad, gw, gh);
+
+        // Transformation Line: s = 255 - r
+        ctxGraph.strokeStyle = '#38bdf8';
+        ctxGraph.lineWidth = 2.5;
+        ctxGraph.beginPath();
+        ctxGraph.moveTo(pad, pad); // r=0, s=255
+        ctxGraph.lineTo(w - pad, h - pad); // r=255, s=0
+        ctxGraph.stroke();
+
+        // Active Point Marker
+        const cx = pad + (activeR / 255) * gw;
+        const cy = (h - pad) - (activeS / 255) * gh;
+
+        ctxGraph.setLineDash([3, 3]);
+        ctxGraph.strokeStyle = '#f43f5e';
+        ctxGraph.beginPath();
+        ctxGraph.moveTo(cx, h - pad);
+        ctxGraph.lineTo(cx, cy);
+        ctxGraph.lineTo(pad, cy);
+        ctxGraph.stroke();
+        ctxGraph.setLineDash([]);
+
+        ctxGraph.fillStyle = '#f43f5e';
+        ctxGraph.beginPath();
+        ctxGraph.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctxGraph.fill();
+
+        // Labels
+        ctxGraph.fillStyle = '#94a3b8';
+        ctxGraph.font = '10px Inter';
+        ctxGraph.fillText('r=0', pad - 10, h - pad + 15);
+        ctxGraph.fillText('r=255', w - pad - 15, h - pad + 15);
+        ctxGraph.fillText('s=255', pad - 25, pad - 5);
+    }
+
+    pixelSlider.addEventListener('input', (e) => updateSinglePixel(parseInt(e.target.value)));
+
+    // --- MODULE 2: MATRIX PRACTICE ---
+    let matrixData = [
+        [15, 200, 80],
+        [0, 128, 255],
+        [190, 45, 220]
+    ];
+
+    const inputMatrixGrid = document.getElementById('inputMatrixGrid');
+    const outputMatrixGrid = document.getElementById('outputMatrixGrid');
+
+    function renderMatrices() {
+        inputMatrixGrid.innerHTML = '';
+        outputMatrixGrid.innerHTML = '';
+
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const valIn = matrixData[r][c];
+                const valOut = 255 - valIn;
+
+                // Input Cell
+                const cellIn = document.createElement('div');
+                cellIn.className = 'matrix-cell';
+                cellIn.style.backgroundColor = `rgb(${valIn},${valIn},${valIn})`;
+                cellIn.style.color = valIn > 128 ? '#000' : '#fff';
+
+                const inputField = document.createElement('input');
+                inputField.className = 'matrix-input-cell';
+                inputField.value = valIn;
+                inputField.addEventListener('change', (e) => {
+                    let v = parseInt(e.target.value) || 0;
+                    v = Math.max(0, Math.min(255, v));
+                    matrixData[r][c] = v;
+                    renderMatrices();
+                });
+                cellIn.appendChild(inputField);
+
+                // Output Cell
+                const cellOut = document.createElement('div');
+                cellOut.className = 'matrix-cell';
+                cellOut.style.backgroundColor = `rgb(${valOut},${valOut},${valOut})`;
+                cellOut.style.color = valOut > 128 ? '#000' : '#fff';
+                cellOut.textContent = valOut;
+
+                inputMatrixGrid.appendChild(cellIn);
+                outputMatrixGrid.appendChild(cellOut);
+            }
+        }
+    }
+
+    document.getElementById('btnRandomizeMatrix').addEventListener('click', () => {
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                matrixData[r][c] = Math.floor(Math.random() * 256);
+            }
+        }
+        renderMatrices();
+    });
+
+    // --- MODULE 3: IMAGE PRESETS ---
+    const srcCanvas = document.getElementById('srcCanvas');
+    const dstCanvas = document.getElementById('dstCanvas');
+    const ctxSrc = srcCanvas.getContext('2d');
+    const ctxDst = dstCanvas.getContext('2d');
+
+    function loadPreset(type) {
+        const size = 150;
+        srcCanvas.width = size;
+        srcCanvas.height = size;
+        dstCanvas.width = size;
+        dstCanvas.height = size;
+
+        const imgData = ctxSrc.createImageData(size, size);
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                let val = 0;
+                const idx = (y * size + x) * 4;
+
+                if (type === 'xray') {
+                    // Bone structure pattern
+                    const dist = Math.sqrt((x - 75) ** 2 + (y - 75) ** 2);
+                    val = dist < 45 ? 180 + Math.sin(x / 5) * 40 : 30;
+                } else if (type === 'film') {
+                    // High-contrast portrait outline
+                    val = ((x > 40 && x < 110) && (y > 30 && y < 120)) ? 220 : 40;
+                } else if (type === 'text') {
+                    // White background with dark text stripes
+                    val = (y % 20 < 4 && x > 20 && x < 130) ? 20 : 240;
+                }
+
+                imgData.data[idx] = val;
+                imgData.data[idx + 1] = val;
+                imgData.data[idx + 2] = val;
+                imgData.data[idx + 3] = 255;
+            }
+        }
+
+        ctxSrc.putImageData(imgData, 0, 0);
+
+        // Process Negative
+        const dstData = ctxDst.createImageData(size, size);
+        for (let i = 0; i < imgData.data.length; i += 4) {
+            const r = imgData.data[i];
+            const s = 255 - r;
+            dstData.data[i] = s;
+            dstData.data[i + 1] = s;
+            dstData.data[i + 2] = s;
+            dstData.data[i + 3] = 255;
+        }
+        ctxDst.putImageData(dstData, 0, 0);
+    }
+
+    document.querySelectorAll('.preset-buttons .btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.preset-buttons .btn').forEach(b => b.classList.remove('btn-active'));
+            e.target.classList.add('btn-active');
+
+            if (e.target.id === 'presetXray') loadPreset('xray');
+            if (e.target.id === 'presetFilm') loadPreset('film');
+            if (e.target.id === 'presetText') loadPreset('text');
+        });
+    });
+
+    // Initialize All
+    updateSinglePixel(128);
+    renderMatrices();
+    loadPreset('xray');
+    window.addEventListener('resize', () => drawGraph(parseInt(pixelSlider.value), 255 - parseInt(pixelSlider.value)));
+</script>
+</body>
+</html>
