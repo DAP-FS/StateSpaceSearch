@@ -1,0 +1,158 @@
+<div style="font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;">
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 28px; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); max-width: 420px; width: 100%;">
+    
+    <!-- Header -->
+    <div style="text-align: center;">
+      <div style="font-size: 20px; font-weight: 700; color: #1a1a2e;">Spatial Matrix Geometry</div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">3×3 Neighborhood in Image Processing</div>
+    </div>
+    
+    <!-- Grid -->
+    <div id="grid" style="display: grid; grid-template-columns: repeat(3, 80px); grid-template-rows: repeat(3, 80px); gap: 8px; padding: 8px;"></div>
+    
+    <!-- Legend -->
+    <div style="display: flex; gap: 20px; font-size: 12px; color: #64748b;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 12px; height: 12px; border-radius: 3px; background: #f59e0b;"></div>
+        <span>Target z₅ = f(x,y)</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 12px; height: 12px; border-radius: 3px; background: #818cf8;"></div>
+        <span>Neighbors z₁–z₄, z₆–z₉</span>
+      </div>
+    </div>
+    
+    <!-- Formula -->
+    <div id="formulaBox" style="background: #1e293b; color: #e2e8f0; padding: 14px 18px; border-radius: 12px; width: 100%; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; text-align: center;">
+      Z = [z₁ z₂ z₃]<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;[z₄ <span style="color: #fbbf24; font-weight: bold;">z₅</span> z₆]<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;[z₇ z₈ z₉]
+    </div>
+    
+    <!-- Info Panel -->
+    <div id="infoPanel" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; width: 100%; text-align: center; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
+      <div style="font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Spatial Relationship</div>
+      <div id="infoText" style="font-size: 15px; color: #1e293b; font-family: 'Times New Roman', serif; line-height: 1.6;">
+        Hover over any pixel to explore coordinates
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+(function() {
+  const grid = document.getElementById('grid');
+  const infoText = document.getElementById('infoText');
+  const formulaBox = document.getElementById('formulaBox');
+  
+  const matrix = [
+    { label: 'z₁', x: -1, y: -1, func: 'f(x-1, y-1)', desc: 'Top-Left' },
+    { label: 'z₂', x: 0, y: -1, func: 'f(x-1, y)', desc: 'Top-Center' },
+    { label: 'z₃', x: 1, y: -1, func: 'f(x-1, y+1)', desc: 'Top-Right' },
+    { label: 'z₄', x: -1, y: 0, func: 'f(x, y-1)', desc: 'Middle-Left' },
+    { label: 'z₅', x: 0, y: 0, func: 'f(x, y)', desc: 'Center (Target)' },
+    { label: 'z₆', x: 1, y: 0, func: 'f(x, y+1)', desc: 'Middle-Right' },
+    { label: 'z₇', x: -1, y: 1, func: 'f(x+1, y-1)', desc: 'Bottom-Left' },
+    { label: 'z₈', x: 0, y: 1, func: 'f(x+1, y)', desc: 'Bottom-Center' },
+    { label: 'z₉', x: 1, y: 1, func: 'f(x+1, y+1)', desc: 'Bottom-Right' }
+  ];
+  
+  function createCell(cell, index) {
+    const div = document.createElement('div');
+    const isCenter = index === 4;
+    div.style.cssText = `
+      width: 80px; height: 80px; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid transparent; user-select: none;
+      background: ${isCenter ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'};
+      border-color: ${isCenter ? '#d97706' : '#818cf8'};
+    `;
+    
+    if (isCenter) {
+      div.style.animation = 'pulseCenter 2s ease-in-out infinite';
+    }
+    
+    div.innerHTML = `
+      <div style="font-size: 14px; font-weight: 700; color: ${isCenter ? '#92400e' : '#4f46e5'}; margin-bottom: 3px;">${cell.label}</div>
+      <div style="font-size: 10px; color: ${isCenter ? '#78350f' : '#6b7280'}; font-family: 'Courier New', monospace; text-align: center; padding: 0 2px;">${cell.func}</div>
+    `;
+    
+    div.addEventListener('mouseenter', () => {
+      div.style.transform = 'scale(1.12)';
+      div.style.zIndex = '10';
+      updateInfo(cell, index);
+      updateFormula(index);
+      dimOthers(index);
+    });
+    
+    div.addEventListener('mouseleave', () => {
+      div.style.transform = '';
+      div.style.zIndex = '';
+      resetAll();
+    });
+    
+    return div;
+  }
+  
+  matrix.forEach((cell, i) => {
+    grid.appendChild(createCell(cell, i));
+  });
+  
+  function updateInfo(cell, index) {
+    const isCenter = index === 4;
+    const color = isCenter ? '#d97706' : '#4f46e5';
+    infoText.innerHTML = `
+      <div style="margin-bottom: 6px;"><strong style="color: ${color}; font-size: 16px;">${cell.desc}</strong></div>
+      <div style="font-size: 16px; margin-bottom: 4px;">${cell.label} = <span style="color: ${color}; font-weight: 700;">${cell.func}</span></div>
+      <div style="font-size: 12px; color: #64748b; margin-top: 6px;">Offset: (Δx, Δy) = (${cell.x >= 0 ? '+' + cell.x : cell.x}, ${cell.y >= 0 ? '+' + cell.y : cell.y})</div>
+    `;
+  }
+  
+  function updateFormula(activeIndex) {
+    const labels = ['z₁','z₂','z₃','z₄','z₅','z₆','z₇','z₈','z₉'];
+    let html = 'Z = [';
+    for (let i = 0; i < 9; i++) {
+      if (i > 0 && i % 3 === 0) html += ']<br>&nbsp;&nbsp;&nbsp;&nbsp;[';
+      else if (i > 0) html += ' ';
+      html += i === activeIndex ? `<span style="color: #fbbf24; font-weight: bold;">${labels[i]}</span>` : `<span style="color: #a5b4fc;">${labels[i]}</span>`;
+    }
+    html += ']';
+    formulaBox.innerHTML = html;
+  }
+  
+  function dimOthers(activeIndex) {
+    const cells = grid.children;
+    for (let i = 0; i < cells.length; i++) {
+      if (i !== activeIndex && i !== 4) {
+        cells[i].style.opacity = '0.4';
+      }
+    }
+  }
+  
+  function resetAll() {
+    const cells = grid.children;
+    for (let i = 0; i < cells.length; i++) {
+      cells[i].style.opacity = '1';
+      cells[i].style.transform = '';
+      cells[i].style.zIndex = '';
+    }
+    infoText.innerHTML = 'Hover over any pixel to explore coordinates';
+    formulaBox.innerHTML = `Z = [z₁ z₂ z₃]<br>&nbsp;&nbsp;&nbsp;&nbsp;[z₄ <span style="color: #fbbf24; font-weight: bold;">z₅</span> z₆]<br>&nbsp;&nbsp;&nbsp;&nbsp;[z₇ z₈ z₉]`;
+  }
+  
+  // Add pulse animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulseCenter {
+      0%, 100% { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); }
+      50% { box-shadow: 0 8px 28px rgba(245, 158, 11, 0.6); }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Initialize with center info
+  updateInfo(matrix[4], 4);
+})();
+</script>
