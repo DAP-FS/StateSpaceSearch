@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>8-Puzzle Pro — Setup & Play</title>
+  <title>8-Puzzle Pro — Setup & Solve</title>
   <style>
     :root {
       --bg: #07090e;
@@ -69,7 +69,7 @@
       -webkit-text-fill-color: transparent;
     }
     .title {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
       letter-spacing: -0.3px;
       margin-top: 2px;
@@ -93,12 +93,13 @@
     }
     .content::-webkit-scrollbar { display: none; }
 
-    /* Phase Indicator */
+    /* Phase Bar */
     .phase-bar {
       display: flex;
       gap: 6px;
       justify-content: center;
       padding: 4px 0;
+      flex-shrink: 0;
     }
     .phase-dot {
       width: 8px;
@@ -126,8 +127,10 @@
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: var(--cyan);
     }
+    .board-label.cyan { color: var(--cyan); }
+    .board-label.green { color: var(--green); }
+    .board-label.pink { color: var(--pink); }
     .board {
       display: grid;
       grid-template-columns: repeat(3, var(--cell));
@@ -175,16 +178,15 @@
       box-shadow: 0 0 0 2px var(--gold), 0 0 15px var(--gold);
       z-index: 2;
     }
-    .tile.swapping {
-      animation: swapPop 0.3s ease;
+    .tile.hint-glow {
+      animation: hintPulse 1.2s ease infinite;
     }
-    @keyframes swapPop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
+    @keyframes hintPulse {
+      0%, 100% { box-shadow: 0 0 5px var(--gold); }
+      50% { box-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold); }
     }
 
-    /* Hint text under board */
+    /* Hint text */
     .board-hint {
       font-size: 10px;
       color: var(--muted);
@@ -230,19 +232,30 @@
       border-color: var(--gold);
       color: var(--gold);
     }
-    .btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Validation */
+    .validation-msg {
+      font-size: 11px;
+      color: var(--danger);
+      font-weight: 700;
+      text-align: center;
+      padding: 4px 0;
     }
 
-    /* Analytics Panel (minimal) */
+    /* Analytics Card */
     .analytics-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px;
     }
-    .analytics-card .panel-title {
+    .panel-title {
       font-size: 10px;
       font-weight: 800;
       text-transform: uppercase;
@@ -251,7 +264,7 @@
       margin-bottom: 10px;
     }
 
-    /* Compact stats row */
+    /* Compact Stats */
     .compact-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -276,49 +289,20 @@
       font-weight: 800;
       margin-top: 2px;
     }
-    .cstat-sub {
-      font-size: 8px;
-      color: var(--muted);
-    }
 
-    /* Move history compact */
-    .move-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-height: 120px;
-      overflow-y: auto;
-      scrollbar-width: none;
-    }
-    .move-list::-webkit-scrollbar { display: none; }
-    .move-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 8px;
-      background: var(--panel);
-      border-radius: 6px;
-      font-size: 11px;
-      border: 1px solid var(--border);
-    }
-    .move-item.undo { border-color: rgba(239,68,68,0.3); }
-    .move-item .mi-num { color: var(--cyan); font-weight: 700; width: 20px; }
-    .move-item .mi-tile { font-weight: 700; }
-    .move-item .mi-dir { color: var(--muted); }
-    .move-item .mi-time { color: var(--muted); font-size: 10px; }
-
-    /* Efficiency ring */
+    /* Efficiency Ring */
     .efficiency-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 14px;
-      padding: 6px 0;
+      padding: 4px 0;
     }
     .eff-ring {
       width: 70px;
       height: 70px;
       position: relative;
+      flex-shrink: 0;
     }
     .eff-ring svg { transform: rotate(-90deg); }
     .eff-text {
@@ -340,7 +324,7 @@
     }
     .eff-detail span { color: var(--text); font-weight: 700; }
 
-    /* Progress bar */
+    /* Progress */
     .progress-wrap {
       width: 100%;
       height: 4px;
@@ -355,6 +339,32 @@
       transition: width 0.5s ease;
       width: 0%;
     }
+
+    /* Move History */
+    .move-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 100px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .move-list::-webkit-scrollbar { display: none; }
+    .move-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      background: var(--panel);
+      border-radius: 6px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+    }
+    .move-item.undo { border-color: rgba(239,68,68,0.3); }
+    .mi-num { color: var(--cyan); font-weight: 700; width: 22px; }
+    .mi-tile { font-weight: 700; }
+    .mi-dir { color: var(--muted); }
+    .mi-time { color: var(--muted); font-size: 10px; }
 
     /* Game Over Overlay */
     .overlay {
@@ -377,7 +387,7 @@
     .overlay.show { opacity: 1; pointer-events: auto; }
     .ov-trophy { font-size: 44px; }
     .ov-title {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       background: linear-gradient(135deg, var(--green), var(--cyan));
       -webkit-background-clip: text;
@@ -431,49 +441,41 @@
     <div class="header">
       <div class="badge">8-Puzzle Pro</div>
       <div class="title" id="pageTitle">Setup Puzzle</div>
-      <div class="subtitle" id="pageSubtitle">Tap tiles to set your initial state</div>
+      <div class="subtitle" id="pageSubtitle">Tap two tiles to swap · Arrange your initial state</div>
     </div>
 
-    <!-- PHASE INDICATOR -->
+    <!-- PHASE BAR -->
     <div class="phase-bar">
       <div class="phase-dot active" id="dot1"></div>
       <div class="phase-dot" id="dot2"></div>
-      <div class="phase-dot" id="dot3"></div>
     </div>
 
     <!-- SCROLLABLE CONTENT -->
     <div class="content" id="mainContent">
 
-      <!-- SETUP: Initial State Board -->
-      <div class="board-card" id="initialCard">
-        <div class="board-label">🎯 Initial State</div>
-        <div class="board" id="initialBoard"></div>
-        <div class="board-hint" id="initialHint">Tap two tiles to swap them</div>
+      <!-- SETUP: Initial State -->
+      <div class="board-card" id="setupCard">
+        <div class="board-label cyan">🎯 Initial State</div>
+        <div class="board" id="setupBoard"></div>
+        <div class="board-hint" id="setupHint">Tap two tiles to swap them</div>
         <div class="ctrl-row">
-          <button class="btn" onclick="shuffleInitial()">🔀 Shuffle</button>
-          <button class="btn btn-gold" onclick="resetInitial()">↩️ Reset</button>
-          <button class="btn btn-primary" onclick="confirmInitial()">✓ Confirm</button>
+          <button class="btn" onclick="shuffleSetup()">🔀 Shuffle</button>
+          <button class="btn btn-gold" onclick="resetSetup()">↩️ Reset</button>
+          <button class="btn btn-primary" onclick="confirmSetup()">✓ Start Game</button>
         </div>
+        <div class="validation-msg hidden" id="validationMsg"></div>
       </div>
 
-      <!-- SETUP: Goal State Board (hidden initially) -->
-      <div class="board-card hidden" id="goalCard">
-        <div class="board-label" style="color:var(--green);">🏁 Goal State</div>
+      <!-- GOAL STATE (always visible, fixed) -->
+      <div class="board-card" id="goalCard">
+        <div class="board-label green">🏁 Goal State (Fixed)</div>
         <div class="board" id="goalBoard"></div>
-        <div class="board-hint" id="goalHint">Tap two tiles to swap them</div>
-        <div class="ctrl-row">
-          <button class="btn" onclick="shuffleGoal()">🔀 Shuffle</button>
-          <button class="btn btn-gold" onclick="resetGoal()">↩️ Reset</button>
-          <button class="btn btn-primary" onclick="confirmGoal()">✓ Confirm</button>
-        </div>
+        <div class="board-hint">Standard solved configuration</div>
       </div>
 
-      <!-- VALIDATION MESSAGE -->
-      <div class="board-hint hidden" id="validationMsg" style="color:var(--danger);font-weight:700;"></div>
-
-      <!-- PLAY: Game Board (hidden initially) -->
+      <!-- PLAY: Game Board -->
       <div class="board-card hidden" id="gameCard">
-        <div class="board-label" style="color:var(--pink);">🎮 Playing</div>
+        <div class="board-label pink">🎮 Playing</div>
         <div class="board" id="gameBoard"></div>
         <div class="board-hint" id="gameHint">Tap tiles adjacent to empty space</div>
         <div class="ctrl-row">
@@ -486,7 +488,7 @@
       <!-- PLAY: Progress -->
       <div class="hidden" id="progressSection">
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px;">
-          <span>Progress to Goal</span>
+          <span>Progress</span>
           <span id="progressText">0%</span>
         </div>
         <div class="progress-wrap">
@@ -494,7 +496,7 @@
         </div>
       </div>
 
-      <!-- PLAY: Compact Stats -->
+      <!-- PLAY: Live Stats -->
       <div class="analytics-card hidden" id="statsCard">
         <div class="panel-title">📊 Live Stats</div>
         <div class="compact-stats">
@@ -509,7 +511,6 @@
           <div class="cstat">
             <div class="cstat-label">Efficiency</div>
             <div class="cstat-val" id="stEff" style="color:var(--green);">100%</div>
-            <div class="cstat-sub" id="stEffSub">optimal</div>
           </div>
         </div>
       </div>
@@ -549,9 +550,7 @@
     </div>
 
     <!-- FOOTER -->
-    <div class="footer">
-      <span id="footerText">Step 1 of 3: Set Initial State</span>
-    </div>
+    <div class="footer" id="footerText">Step 1 of 2: Set Initial State</div>
 
     <!-- GAME OVER OVERLAY -->
     <div class="overlay" id="gameOverOverlay">
@@ -586,21 +585,15 @@
 
   <script>
     // ============================================================
-    // 8-PUZZLE PRO — SETUP & PLAY ENGINE
+    // 8-PUZZLE PRO — FIXED GOAL · MANIPULATABLE INITIAL
     // ============================================================
 
-    const DEFAULT_GOAL = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+    const GOAL_STATE = [1, 2, 3, 4, 5, 6, 7, 8, 0];
     const DIRECTION_NAMES = { '-3': '↑', '+3': '↓', '-1': '←', '+1': '→' };
 
-    // Phase: 1=setup initial, 2=setup goal, 3=playing
-    let phase = 1;
-
-    // State
-    let initialState = [...DEFAULT_GOAL];
-    let goalState = [...DEFAULT_GOAL];
+    let phase = 1; // 1=setup, 2=playing
+    let initialState = [...GOAL_STATE];
     let currentState = [];
-
-    // Setup selection
     let selectedIndex = -1;
 
     // Game
@@ -616,25 +609,34 @@
     let showGuide = false;
     let gameTimer = null;
 
-    // DOM refs
-    const initialBoard = document.getElementById('initialBoard');
+    // DOM
+    const setupBoard = document.getElementById('setupBoard');
     const goalBoard = document.getElementById('goalBoard');
     const gameBoard = document.getElementById('gameBoard');
 
     // ============================================================
-    // RENDER BOARDS
+    // RENDER
     // ============================================================
-    function renderSetupBoard(container, state, isClickable) {
-      container.innerHTML = '';
-      state.forEach((value, index) => {
+    function renderSetupBoard() {
+      setupBoard.innerHTML = '';
+      initialState.forEach((value, index) => {
         const tile = document.createElement('div');
         tile.className = 'tile' + (value === 0 ? ' empty' : ' filled');
         if (index === selectedIndex) tile.classList.add('selected');
         tile.textContent = value === 0 ? '' : value;
-        if (isClickable) {
-          tile.addEventListener('click', () => handleSetupClick(container, state, index));
-        }
-        container.appendChild(tile);
+        tile.addEventListener('click', () => handleSetupClick(index));
+        setupBoard.appendChild(tile);
+      });
+    }
+
+    function renderGoalBoard() {
+      goalBoard.innerHTML = '';
+      GOAL_STATE.forEach((value) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile' + (value === 0 ? ' empty' : ' filled');
+        tile.textContent = value === 0 ? '' : value;
+        tile.style.cursor = 'default';
+        goalBoard.appendChild(tile);
       });
     }
 
@@ -649,9 +651,7 @@
         if (value === 0) cls += ' empty';
         else {
           cls += ' filled';
-          if (showGuide) {
-            cls += value === goalState[index] ? ' correct' : ' wrong';
-          }
+          if (showGuide) cls += value === GOAL_STATE[index] ? ' correct' : ' wrong';
         }
         if (gameActive && movable.includes(index)) cls += ' movable';
         tile.className = cls;
@@ -666,72 +666,45 @@
     // ============================================================
     // SETUP PHASE
     // ============================================================
-    function handleSetupClick(container, state, index) {
+    function handleSetupClick(index) {
       if (selectedIndex === -1) {
         selectedIndex = index;
-        renderSetupBoard(container, state, true);
+        renderSetupBoard();
       } else if (selectedIndex === index) {
         selectedIndex = -1;
-        renderSetupBoard(container, state, true);
+        renderSetupBoard();
       } else {
-        // Swap
-        [state[selectedIndex], state[index]] = [state[index], state[selectedIndex]];
+        [initialState[selectedIndex], initialState[index]] = [initialState[index], initialState[selectedIndex]];
         selectedIndex = -1;
-        renderSetupBoard(container, state, true);
+        renderSetupBoard();
         hideValidation();
       }
     }
 
-    function shuffleInitial() {
-      initialState = shuffleArray([...DEFAULT_GOAL]);
+    function shuffleSetup() {
+      initialState = shuffleArray([...GOAL_STATE]);
       selectedIndex = -1;
-      renderSetupBoard(initialBoard, initialState, true);
-      hideValidation();
-    }
-    function resetInitial() {
-      initialState = [...DEFAULT_GOAL];
-      selectedIndex = -1;
-      renderSetupBoard(initialBoard, initialState, true);
-      hideValidation();
-    }
-    function shuffleGoal() {
-      goalState = shuffleArray([...DEFAULT_GOAL]);
-      selectedIndex = -1;
-      renderSetupBoard(goalBoard, goalState, true);
-      hideValidation();
-    }
-    function resetGoal() {
-      goalState = [...DEFAULT_GOAL];
-      selectedIndex = -1;
-      renderSetupBoard(goalBoard, goalState, true);
+      renderSetupBoard();
       hideValidation();
     }
 
-    function confirmInitial() {
-      if (!isValidState(initialState)) {
-        showValidation('Invalid state: numbers 0-8 must each appear exactly once');
+    function resetSetup() {
+      initialState = [...GOAL_STATE];
+      selectedIndex = -1;
+      renderSetupBoard();
+      hideValidation();
+    }
+
+    function confirmSetup() {
+      if (arraysEqual(initialState, GOAL_STATE)) {
+        showValidation('Initial state cannot be the same as goal!');
+        return;
+      }
+      if (!isSolvable(initialState)) {
+        showValidation('This puzzle is unsolvable! Try a different arrangement.');
         return;
       }
       phase = 2;
-      selectedIndex = -1;
-      updatePhaseUI();
-    }
-
-    function confirmGoal() {
-      if (!isValidState(goalState)) {
-        showValidation('Invalid state: numbers 0-8 must each appear exactly once');
-        return;
-      }
-      if (arraysEqual(initialState, goalState)) {
-        showValidation('Initial and goal states must be different');
-        return;
-      }
-      // Check solvability
-      if (!isSolvablePair(initialState, goalState)) {
-        showValidation('This puzzle is unsolvable! Try different states.');
-        return;
-      }
-      phase = 3;
       startPlaying();
       updatePhaseUI();
     }
@@ -758,7 +731,7 @@
       moveHistory = [];
       bestStreak = 0;
       currentStreak = 0;
-      optimalPathLength = computeOptimalPath(currentState, goalState);
+      optimalPathLength = computeOptimalPath(currentState);
 
       renderGameBoard();
       updateStats();
@@ -800,21 +773,21 @@
       updateStats();
       updateProgress();
 
-      if (arraysEqual(currentState, goalState)) endGame();
+      if (arraysEqual(currentState, GOAL_STATE)) endGame();
     }
 
     function hintMove() {
       if (!gameActive) return;
-      const result = bfs(currentState, goalState);
+      const result = bfs(currentState, GOAL_STATE);
       if (result && result.path.length > 1) {
         const nextState = result.path[1];
         for (let i = 0; i < 9; i++) {
           if (currentState[i] !== 0 && nextState[i] === 0) {
             const tiles = gameBoard.querySelectorAll('.tile');
-            if (tiles[i]) {
-              tiles[i].style.boxShadow = '0 0 0 2px var(--gold), 0 0 20px var(--gold)';
-              setTimeout(() => tiles[i].style.boxShadow = '', 1500);
-            }
+            if (tiles[i]) tiles[i].classList.add('hint-glow');
+            setTimeout(() => {
+              if (tiles[i]) tiles[i].classList.remove('hint-glow');
+            }, 1500);
             break;
           }
         }
@@ -830,7 +803,7 @@
       if (!gameActive) return;
       gameActive = false;
       if (gameTimer) clearInterval(gameTimer);
-      const result = bfs(currentState, goalState);
+      const result = bfs(currentState, GOAL_STATE);
       if (result) animateSolution(result.path);
     }
 
@@ -843,7 +816,7 @@
     }
 
     // ============================================================
-    // STATS & HISTORY
+    // STATS
     // ============================================================
     function updateStats() {
       const elapsed = gameActive ? (Date.now() - gameStartTime) / 1000 : 0;
@@ -856,14 +829,14 @@
       }
       document.getElementById('stEff').textContent = eff + '%';
       document.getElementById('stEff').style.color = eff >= 80 ? 'var(--green)' : eff >= 50 ? 'var(--warning)' : 'var(--danger)';
-      document.getElementById('stEffSub').textContent = `optimal: ${optimalPathLength}`;
 
       // Ring
       document.getElementById('effScore').textContent = eff;
-      const circumference = 2 * Math.PI * 30; // ~188.5
+      const circumference = 2 * Math.PI * 30;
       const offset = circumference - (eff / 100) * circumference;
-      document.getElementById('effCircle').style.strokeDashoffset = offset;
-      document.getElementById('effCircle').style.stroke = eff >= 80 ? 'var(--green)' : eff >= 50 ? 'var(--warning)' : 'var(--danger)';
+      const circle = document.getElementById('effCircle');
+      circle.style.strokeDashoffset = offset;
+      circle.style.stroke = eff >= 80 ? 'var(--green)' : eff >= 50 ? 'var(--warning)' : 'var(--danger)';
 
       document.getElementById('effOptimal').textContent = optimalPathLength;
       document.getElementById('effYour').textContent = totalMoves;
@@ -873,7 +846,7 @@
 
     function updateProgress() {
       let correct = 0;
-      for (let i = 0; i < 9; i++) if (currentState[i] === goalState[i]) correct++;
+      for (let i = 0; i < 9; i++) if (currentState[i] === GOAL_STATE[i]) correct++;
       const pct = Math.round((correct / 9) * 100);
       document.getElementById('progressFill').style.width = pct + '%';
       document.getElementById('progressText').textContent = pct + '%';
@@ -893,12 +866,12 @@
       item.className = 'move-item' + (move.isBacktrack ? ' undo' : '');
       item.innerHTML = `
         <span class="mi-num">#${move.moveNumber}</span>
-        <span class="mi-tile">Tile ${move.tileValue}</span>
+        <span class="mi-tile">${move.tileValue}</span>
         <span class="mi-dir">${move.directionName}</span>
         <span class="mi-time">${(move.thinkTime / 1000).toFixed(1)}s</span>
       `;
       list.insertBefore(item, list.firstChild);
-      while (list.children.length > 20) list.removeChild(list.lastChild);
+      while (list.children.length > 15) list.removeChild(list.lastChild);
     }
 
     function clearHistory() {
@@ -932,50 +905,43 @@
 
     function resetAll() {
       phase = 1;
-      initialState = [...DEFAULT_GOAL];
-      goalState = [...DEFAULT_GOAL];
+      initialState = [...GOAL_STATE];
       selectedIndex = -1;
       gameActive = false;
       if (gameTimer) clearInterval(gameTimer);
       document.getElementById('gameOverOverlay').classList.remove('show');
       updatePhaseUI();
-      renderSetupBoard(initialBoard, initialState, true);
+      renderSetupBoard();
     }
 
     // ============================================================
     // PHASE UI
     // ============================================================
     function updatePhaseUI() {
-      // Dots
       document.getElementById('dot1').className = 'phase-dot' + (phase === 1 ? ' active' : ' done');
-      document.getElementById('dot2').className = 'phase-dot' + (phase === 2 ? ' active' : phase > 2 ? ' done' : '');
-      document.getElementById('dot3').className = 'phase-dot' + (phase === 3 ? ' active' : '');
+      document.getElementById('dot2').className = 'phase-dot' + (phase === 2 ? ' active' : '');
 
-      // Cards
-      document.getElementById('initialCard').classList.toggle('hidden', phase !== 1);
-      document.getElementById('goalCard').classList.toggle('hidden', phase !== 2);
-      document.getElementById('gameCard').classList.toggle('hidden', phase !== 3);
-      document.getElementById('statsCard').classList.toggle('hidden', phase !== 3);
-      document.getElementById('effCard').classList.toggle('hidden', phase !== 3);
-      document.getElementById('historyCard').classList.toggle('hidden', phase !== 3);
-      document.getElementById('progressSection').classList.toggle('hidden', phase !== 3);
+      document.getElementById('setupCard').classList.toggle('hidden', phase !== 1);
+      document.getElementById('goalCard').classList.toggle('hidden', phase !== 1);
+      document.getElementById('gameCard').classList.toggle('hidden', phase !== 2);
+      document.getElementById('statsCard').classList.toggle('hidden', phase !== 2);
+      document.getElementById('effCard').classList.toggle('hidden', phase !== 2);
+      document.getElementById('historyCard').classList.toggle('hidden', phase !== 2);
+      document.getElementById('progressSection').classList.toggle('hidden', phase !== 2);
 
-      // Header
       const titles = {
-        1: ['Setup Puzzle', 'Tap two tiles to swap them'],
-        2: ['Set Goal State', 'Define where you want to end up'],
-        3: ['Solve the Puzzle', 'Tap tiles to reach the goal']
+        1: ['Setup Puzzle', 'Tap two tiles to swap · Arrange your initial state'],
+        2: ['Solve the Puzzle', 'Slide tiles to reach the goal state']
       };
       document.getElementById('pageTitle').textContent = titles[phase][0];
       document.getElementById('pageSubtitle').textContent = titles[phase][1];
-      document.getElementById('footerText').textContent = `Step ${phase} of 3: ${titles[phase][0]}`;
+      document.getElementById('footerText').textContent = phase === 1 ? 'Step 1 of 2: Set Initial State' : 'Step 2 of 2: Playing';
 
-      // Validation
       hideValidation();
     }
 
     // ============================================================
-    // BFS SOLVER
+    // BFS
     // ============================================================
     function bfs(startState, goalState) {
       const startKey = startState.join(',');
@@ -1002,8 +968,8 @@
       return null;
     }
 
-    function computeOptimalPath(state, goal) {
-      const result = bfs(state, goal);
+    function computeOptimalPath(state) {
+      const result = bfs(state, GOAL_STATE);
       return result ? result.moves : 0;
     }
 
@@ -1030,23 +996,13 @@
       return map[dir] || dir;
     }
 
-    function isValidState(state) {
-      const sorted = [...state].sort((a, b) => a - b);
-      return sorted.every((v, i) => v === i);
-    }
-
-    function isSolvablePair(start, goal) {
-      // For 8-puzzle, two states are reachable from each other iff they have same parity
-      return (countInversions(start) % 2) === (countInversions(goal) % 2);
-    }
-
-    function countInversions(state) {
+    function isSolvable(state) {
       const tiles = state.filter(x => x !== 0);
       let inv = 0;
       for (let i = 0; i < tiles.length; i++)
         for (let j = i + 1; j < tiles.length; j++)
           if (tiles[i] > tiles[j]) inv++;
-      return inv;
+      return inv % 2 === 0;
     }
 
     function arraysEqual(a, b) {
@@ -1072,7 +1028,7 @@
 
     // Keyboard
     document.addEventListener('keydown', (e) => {
-      if (phase !== 3 || !gameActive) return;
+      if (phase !== 2 || !gameActive) return;
       const emptyIdx = currentState.indexOf(0);
       const movable = getMovableIndices(emptyIdx);
       let target = -1;
@@ -1086,9 +1042,10 @@
     });
 
     // ============================================================
-    // START
+    // INIT
     // ============================================================
-    renderSetupBoard(initialBoard, initialState, true);
+    renderSetupBoard();
+    renderGoalBoard();
   </script>
 </body>
 </html>
