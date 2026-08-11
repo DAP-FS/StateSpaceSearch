@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>8-Puzzle Pro — Setup & Play</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: #0f1420;
+      --panel: rgba(22, 29, 45, 0.9);
+      --text: #ffffff;
+      --muted: #94a3b8;
+      --cyan: #00f2fe;
+      --purple: #7000ff;
+      --pink: #ff2a6d;
+      --gold: #ffb703;
+      --green: #05ffa1;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: rgba(255, 255, 255, 0.12);
+      --cell: 62px;
+      --gap: 5px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 9:16 Mobile Frame */
+    .frame {
+      width: 100vw;
+      max-width: 390px;
+      height: 100vh;
+      max-height: 700px;
+      aspect-ratio: 9 / 16;
+      background: radial-gradient(circle at 50% 10%, #151c2e 0%, #07090e 100%);
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8), 0 0 30px rgba(0, 242, 254, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 14px 16px 6px;
+      flex-shrink: 0;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-top: 2px;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Scrollable Content */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scrollbar-width: none;
+    }
+    .content::-webkit-scrollbar { display: none; }
+
+    /* Phase Indicator */
+    .phase-bar {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      padding: 4px 0;
+    }
+    .phase-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      transition: all 0.3s;
+    }
+    .phase-dot.active { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .phase-dot.done { background: var(--green); }
+
+    /* Board Card */
+    .board-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .board-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--cyan);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, var(--cell));
+      grid-template-rows: repeat(3, var(--cell));
+      gap: var(--gap);
+    }
+    .tile {
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.2s;
+      cursor: default;
+      position: relative;
+    }
+    .tile.filled {
+      background: linear-gradient(145deg, rgba(0,242,254,0.2), rgba(112,0,255,0.3));
+      border-color: rgba(0,242,254,0.25);
+      color: #fff;
+    }
+    .tile.empty {
+      background: transparent;
+      border: 2px dashed rgba(255,255,255,0.12);
+      color: transparent;
+    }
+    .tile.movable { cursor: pointer; }
+    .tile.movable:hover, .tile.movable:active {
+      transform: scale(1.04);
+      box-shadow: 0 0 18px rgba(0,242,254,0.25);
+    }
+    .tile.correct {
+      border-color: var(--green);
+      box-shadow: 0 0 10px rgba(5,255,161,0.2);
+    }
+    .tile.wrong {
+      border-color: rgba(239,68,68,0.3);
+    }
+    .tile.selected {
+      box-shadow: 0 0 0 2px var(--gold), 0 0 15px var(--gold);
+      z-index: 2;
+    }
+    .tile.swapping {
+      animation: swapPop 0.3s ease;
+    }
+    @keyframes swapPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Hint text under board */
+    .board-hint {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Controls */
+    .ctrl-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn:hover { background: rgba(255,255,255,0.06); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0,242,254,0.2);
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-success {
+      background: rgba(5,255,161,0.12);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .btn-gold {
+      background: rgba(255,183,3,0.12);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Analytics Panel (minimal) */
+    .analytics-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .analytics-card .panel-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* Compact stats row */
+    .compact-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .cstat {
+      background: var(--panel);
+      border-radius: 10px;
+      padding: 8px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .cstat-label {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+    .cstat-val {
+      font-size: 18px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+    .cstat-sub {
+      font-size: 8px;
+      color: var(--muted);
+    }
+
+    /* Move history compact */
+    .move-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 120px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .move-list::-webkit-scrollbar { display: none; }
+    .move-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      background: var(--panel);
+      border-radius: 6px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+    }
+    .move-item.undo { border-color: rgba(239,68,68,0.3); }
+    .move-item .mi-num { color: var(--cyan); font-weight: 700; width: 20px; }
+    .move-item .mi-tile { font-weight: 700; }
+    .move-item .mi-dir { color: var(--muted); }
+    .move-item .mi-time { color: var(--muted); font-size: 10px; }
+
+    /* Efficiency ring */
+    .efficiency-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 6px 0;
+    }
+    .eff-ring {
+      width: 70px;
+      height: 70px;
+      position: relative;
+    }
+    .eff-ring svg { transform: rotate(-90deg); }
+    .eff-text {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .eff-score { font-size: 18px; font-weight: 800; }
+    .eff-label { font-size: 8px; color: var(--muted); text-transform: uppercase; }
+    .eff-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .eff-detail {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .eff-detail span { color: var(--text); font-weight: 700; }
+
+    /* Progress bar */
+    .progress-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    /* Game Over Overlay */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7,9,14,0.95);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      z-index: 30;
+    }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .ov-trophy { font-size: 44px; }
+    .ov-title {
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .ov-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+    .ov-stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .ov-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .ov-stat-val { font-size: 18px; font-weight: 800; margin-top: 2px; }
+    .ov-rating {
+      background: linear-gradient(90deg, var(--pink), var(--purple));
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      box-shadow: 0 8px 20px rgba(255,42,109,0.25);
+    }
+
+    /* Footer */
+    .footer {
+      padding: 8px 16px 12px;
+      text-align: center;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+<base target="_blank">
+</head>
+<body>
+
+  <div class="frame">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="badge">8-Puzzle Pro</div>
+      <div class="title" id="pageTitle">Setup Puzzle</div>
+      <div class="subtitle" id="pageSubtitle">Tap tiles to set your initial state</div>
+    </div>
+
+    <!-- PHASE INDICATOR -->
+    <div class="phase-bar">
+      <div class="phase-dot active" id="dot1"></div>
+      <div class="phase-dot" id="dot2"></div>
+      <div class="phase-dot" id="dot3"></div>
+    </div>
+
+    <!-- SCROLLABLE CONTENT -->
+    <div class="content" id="mainContent">
+
+      <!-- SETUP: Initial State Board -->
+      <div class="board-card" id="initialCard">
+        <div class="board-label">🎯 Initial State</div>
+        <div class="board" id="initialBoard"></div>
+        <div class="board-hint" id="initialHint">Tap two tiles to swap them</div>
+        <div class="ctrl-row">
+          <button class="btn" onclick="shuffleInitial()">🔀 Shuffle</button>
+          <button class="btn btn-gold" onclick="resetInitial()">↩️ Reset</button>
+          <button class="btn btn-primary" onclick="confirmInitial()">✓ Confirm</button>
+        </div>
+      </div>
+
+      <!-- SETUP: Goal State Board (hidden initially) -->
+      <div class="board-card hidden" id="goalCard">
+        <div class="board-label" style="color:var(--green);">🏁 Goal State</div>
+        <div class="board" id="goalBoard"></div>
+        <div class="board-hint" id="goalHint">Tap two tiles to swap them</div>
+        <div class="ctrl-row">
+          <button class="btn" onclick="shuffleGoal()">🔀 Shuffle</button>
+          <button class="btn btn-gold" onclick="resetGoal()">↩️ Reset</button>
+          <button class="btn btn-primary" onclick="confirmGoal()">✓ Confirm</button>
+        </div>
+      </div>
+
+      <!-- VALIDATION MESSAGE -->
+      <div class="board-hint hidden" id="validationMsg" style="color:var(--danger);font-weight:700;"></div>
+
+      <!-- PLAY: Game Board (hidden initially) -->
+      <div class="board-card hidden" id="gameCard">
+        <div class="board-label" style="color:var(--pink);">🎮 Playing</div>
+        <div class="board" id="gameBoard"></div>
+        <div class="board-hint" id="gameHint">Tap tiles adjacent to empty space</div>
+        <div class="ctrl-row">
+          <button class="btn btn-success" onclick="hintMove()">💡 Hint</button>
+          <button class="btn" onclick="toggleGuide()">👁️ Guide</button>
+          <button class="btn btn-danger" onclick="giveUp()">🏳️</button>
+        </div>
+      </div>
+
+      <!-- PLAY: Progress -->
+      <div class="hidden" id="progressSection">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px;">
+          <span>Progress to Goal</span>
+          <span id="progressText">0%</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <!-- PLAY: Compact Stats -->
+      <div class="analytics-card hidden" id="statsCard">
+        <div class="panel-title">📊 Live Stats</div>
+        <div class="compact-stats">
+          <div class="cstat">
+            <div class="cstat-label">Moves</div>
+            <div class="cstat-val" id="stMoves" style="color:var(--cyan);">0</div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-label">Time</div>
+            <div class="cstat-val" id="stTime" style="color:var(--gold);">0s</div>
+          </div>
+          <div class="cstat">
+            <div class="cstat-label">Efficiency</div>
+            <div class="cstat-val" id="stEff" style="color:var(--green);">100%</div>
+            <div class="cstat-sub" id="stEffSub">optimal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAY: Efficiency Ring -->
+      <div class="analytics-card hidden" id="effCard">
+        <div class="panel-title">🎯 Performance</div>
+        <div class="efficiency-wrap">
+          <div class="eff-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle cx="35" cy="35" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+              <circle id="effCircle" cx="35" cy="35" r="30" fill="none" stroke="var(--cyan)" stroke-width="5"
+                stroke-dasharray="188.5" stroke-dashoffset="188.5" stroke-linecap="round" style="transition:stroke-dashoffset 0.5s;"/>
+            </svg>
+            <div class="eff-text">
+              <div class="eff-score" id="effScore">100</div>
+              <div class="eff-label">%</div>
+            </div>
+          </div>
+          <div class="eff-details">
+            <div class="eff-detail">Optimal: <span id="effOptimal">--</span></div>
+            <div class="eff-detail">Your moves: <span id="effYour">0</span></div>
+            <div class="eff-detail">Backtracks: <span id="effBack" style="color:var(--danger);">0</span></div>
+            <div class="eff-detail">Best streak: <span id="effStreak" style="color:var(--green);">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAY: Move History -->
+      <div class="analytics-card hidden" id="historyCard">
+        <div class="panel-title">📋 Moves</div>
+        <div class="move-list" id="moveList">
+          <div style="text-align:center;color:var(--muted);font-size:11px;padding:10px;">No moves yet</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <span id="footerText">Step 1 of 3: Set Initial State</span>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div class="overlay" id="gameOverOverlay">
+      <div class="ov-trophy">🏆</div>
+      <div class="ov-title">SOLVED!</div>
+      <div style="color:var(--muted);font-size:12px;">Puzzle completed successfully</div>
+      <div class="ov-stats">
+        <div class="ov-stat">
+          <div class="ov-stat-label">Moves</div>
+          <div class="ov-stat-val" id="ovMoves">0</div>
+        </div>
+        <div class="ov-stat">
+          <div class="ov-stat-label">Time</div>
+          <div class="ov-stat-val" id="ovTime">0s</div>
+        </div>
+        <div class="ov-stat">
+          <div class="ov-stat-label">Efficiency</div>
+          <div class="ov-stat-val" id="ovEff">0%</div>
+        </div>
+        <div class="ov-stat">
+          <div class="ov-stat-label">Backtracks</div>
+          <div class="ov-stat-val" id="ovBack">0</div>
+        </div>
+      </div>
+      <div class="ov-rating" id="ovRating">⭐ MASTER</div>
+      <div class="ctrl-row" style="margin-top:4px;">
+        <button class="btn btn-primary" onclick="resetAll()" style="padding:10px 24px;">🎮 Play Again</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // 8-PUZZLE PRO — SETUP & PLAY ENGINE
+    // ============================================================
+
+    const DEFAULT_GOAL = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+    const DIRECTION_NAMES = { '-3': '↑', '+3': '↓', '-1': '←', '+1': '→' };
+
+    // Phase: 1=setup initial, 2=setup goal, 3=playing
+    let phase = 1;
+
+    // State
+    let initialState = [...DEFAULT_GOAL];
+    let goalState = [...DEFAULT_GOAL];
+    let currentState = [];
+
+    // Setup selection
+    let selectedIndex = -1;
+
+    // Game
+    let gameActive = false;
+    let gameStartTime = 0;
+    let moveHistory = [];
+    let lastMoveTime = 0;
+    let totalMoves = 0;
+    let backtrackCount = 0;
+    let bestStreak = 0;
+    let currentStreak = 0;
+    let optimalPathLength = 0;
+    let showGuide = false;
+    let gameTimer = null;
+
+    // DOM refs
+    const initialBoard = document.getElementById('initialBoard');
+    const goalBoard = document.getElementById('goalBoard');
+    const gameBoard = document.getElementById('gameBoard');
+
+    // ============================================================
+    // RENDER BOARDS
+    // ============================================================
+    function renderSetupBoard(container, state, isClickable) {
+      container.innerHTML = '';
+      state.forEach((value, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile' + (value === 0 ? ' empty' : ' filled');
+        if (index === selectedIndex) tile.classList.add('selected');
+        tile.textContent = value === 0 ? '' : value;
+        if (isClickable) {
+          tile.addEventListener('click', () => handleSetupClick(container, state, index));
+        }
+        container.appendChild(tile);
+      });
+    }
+
+    function renderGameBoard() {
+      gameBoard.innerHTML = '';
+      const emptyIdx = currentState.indexOf(0);
+      const movable = getMovableIndices(emptyIdx);
+
+      currentState.forEach((value, index) => {
+        const tile = document.createElement('div');
+        let cls = 'tile';
+        if (value === 0) cls += ' empty';
+        else {
+          cls += ' filled';
+          if (showGuide) {
+            cls += value === goalState[index] ? ' correct' : ' wrong';
+          }
+        }
+        if (gameActive && movable.includes(index)) cls += ' movable';
+        tile.className = cls;
+        tile.textContent = value === 0 ? '' : value;
+        if (gameActive && movable.includes(index)) {
+          tile.addEventListener('click', () => handleGameMove(index));
+        }
+        gameBoard.appendChild(tile);
+      });
+    }
+
+    // ============================================================
+    // SETUP PHASE
+    // ============================================================
+    function handleSetupClick(container, state, index) {
+      if (selectedIndex === -1) {
+        selectedIndex = index;
+        renderSetupBoard(container, state, true);
+      } else if (selectedIndex === index) {
+        selectedIndex = -1;
+        renderSetupBoard(container, state, true);
+      } else {
+        // Swap
+        [state[selectedIndex], state[index]] = [state[index], state[selectedIndex]];
+        selectedIndex = -1;
+        renderSetupBoard(container, state, true);
+        hideValidation();
+      }
+    }
+
+    function shuffleInitial() {
+      initialState = shuffleArray([...DEFAULT_GOAL]);
+      selectedIndex = -1;
+      renderSetupBoard(initialBoard, initialState, true);
+      hideValidation();
+    }
+    function resetInitial() {
+      initialState = [...DEFAULT_GOAL];
+      selectedIndex = -1;
+      renderSetupBoard(initialBoard, initialState, true);
+      hideValidation();
+    }
+    function shuffleGoal() {
+      goalState = shuffleArray([...DEFAULT_GOAL]);
+      selectedIndex = -1;
+      renderSetupBoard(goalBoard, goalState, true);
+      hideValidation();
+    }
+    function resetGoal() {
+      goalState = [...DEFAULT_GOAL];
+      selectedIndex = -1;
+      renderSetupBoard(goalBoard, goalState, true);
+      hideValidation();
+    }
+
+    function confirmInitial() {
+      if (!isValidState(initialState)) {
+        showValidation('Invalid state: numbers 0-8 must each appear exactly once');
+        return;
+      }
+      phase = 2;
+      selectedIndex = -1;
+      updatePhaseUI();
+    }
+
+    function confirmGoal() {
+      if (!isValidState(goalState)) {
+        showValidation('Invalid state: numbers 0-8 must each appear exactly once');
+        return;
+      }
+      if (arraysEqual(initialState, goalState)) {
+        showValidation('Initial and goal states must be different');
+        return;
+      }
+      // Check solvability
+      if (!isSolvablePair(initialState, goalState)) {
+        showValidation('This puzzle is unsolvable! Try different states.');
+        return;
+      }
+      phase = 3;
+      startPlaying();
+      updatePhaseUI();
+    }
+
+    function showValidation(msg) {
+      const el = document.getElementById('validationMsg');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideValidation() {
+      document.getElementById('validationMsg').classList.add('hidden');
+    }
+
+    // ============================================================
+    // PLAY PHASE
+    // ============================================================
+    function startPlaying() {
+      currentState = [...initialState];
+      gameActive = true;
+      gameStartTime = Date.now();
+      lastMoveTime = gameStartTime;
+      totalMoves = 0;
+      backtrackCount = 0;
+      moveHistory = [];
+      bestStreak = 0;
+      currentStreak = 0;
+      optimalPathLength = computeOptimalPath(currentState, goalState);
+
+      renderGameBoard();
+      updateStats();
+      clearHistory();
+
+      if (gameTimer) clearInterval(gameTimer);
+      gameTimer = setInterval(updateGameTimer, 200);
+    }
+
+    function handleGameMove(tileIndex) {
+      if (!gameActive) return;
+      const emptyIdx = currentState.indexOf(0);
+      const movable = getMovableIndices(emptyIdx);
+      if (!movable.includes(tileIndex)) return;
+
+      const now = Date.now();
+      const thinkTime = now - lastMoveTime;
+      const tileValue = currentState[tileIndex];
+      const direction = getDirection(emptyIdx, tileIndex);
+
+      [currentState[emptyIdx], currentState[tileIndex]] = [currentState[tileIndex], currentState[emptyIdx]];
+
+      const isBacktrack = moveHistory.length > 0 &&
+        moveHistory[moveHistory.length - 1].tileValue === tileValue &&
+        moveHistory[moveHistory.length - 1].direction === oppositeDirection(direction);
+
+      if (isBacktrack) { backtrackCount++; currentStreak = 0; }
+      else { currentStreak++; if (currentStreak > bestStreak) bestStreak = currentStreak; }
+
+      moveHistory.push({
+        moveNumber: ++totalMoves,
+        tileValue, direction, directionName: DIRECTION_NAMES[direction] || direction,
+        thinkTime, isBacktrack
+      });
+      lastMoveTime = now;
+
+      renderGameBoard();
+      addHistoryItem(moveHistory[moveHistory.length - 1]);
+      updateStats();
+      updateProgress();
+
+      if (arraysEqual(currentState, goalState)) endGame();
+    }
+
+    function hintMove() {
+      if (!gameActive) return;
+      const result = bfs(currentState, goalState);
+      if (result && result.path.length > 1) {
+        const nextState = result.path[1];
+        for (let i = 0; i < 9; i++) {
+          if (currentState[i] !== 0 && nextState[i] === 0) {
+            const tiles = gameBoard.querySelectorAll('.tile');
+            if (tiles[i]) {
+              tiles[i].style.boxShadow = '0 0 0 2px var(--gold), 0 0 20px var(--gold)';
+              setTimeout(() => tiles[i].style.boxShadow = '', 1500);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    function toggleGuide() {
+      showGuide = !showGuide;
+      renderGameBoard();
+    }
+
+    function giveUp() {
+      if (!gameActive) return;
+      gameActive = false;
+      if (gameTimer) clearInterval(gameTimer);
+      const result = bfs(currentState, goalState);
+      if (result) animateSolution(result.path);
+    }
+
+    async function animateSolution(path) {
+      for (let i = 0; i < path.length; i++) {
+        currentState = [...path[i]];
+        renderGameBoard();
+        await sleep(300);
+      }
+    }
+
+    // ============================================================
+    // STATS & HISTORY
+    // ============================================================
+    function updateStats() {
+      const elapsed = gameActive ? (Date.now() - gameStartTime) / 1000 : 0;
+      document.getElementById('stMoves').textContent = totalMoves;
+      document.getElementById('stTime').textContent = formatTime(elapsed);
+
+      let eff = 100;
+      if (optimalPathLength > 0 && totalMoves > 0) {
+        eff = Math.round((optimalPathLength / totalMoves) * 100);
+      }
+      document.getElementById('stEff').textContent = eff + '%';
+      document.getElementById('stEff').style.color = eff >= 80 ? 'var(--green)' : eff >= 50 ? 'var(--warning)' : 'var(--danger)';
+      document.getElementById('stEffSub').textContent = `optimal: ${optimalPathLength}`;
+
+      // Ring
+      document.getElementById('effScore').textContent = eff;
+      const circumference = 2 * Math.PI * 30; // ~188.5
+      const offset = circumference - (eff / 100) * circumference;
+      document.getElementById('effCircle').style.strokeDashoffset = offset;
+      document.getElementById('effCircle').style.stroke = eff >= 80 ? 'var(--green)' : eff >= 50 ? 'var(--warning)' : 'var(--danger)';
+
+      document.getElementById('effOptimal').textContent = optimalPathLength;
+      document.getElementById('effYour').textContent = totalMoves;
+      document.getElementById('effBack').textContent = backtrackCount;
+      document.getElementById('effStreak').textContent = bestStreak;
+    }
+
+    function updateProgress() {
+      let correct = 0;
+      for (let i = 0; i < 9; i++) if (currentState[i] === goalState[i]) correct++;
+      const pct = Math.round((correct / 9) * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressText').textContent = pct + '%';
+    }
+
+    function updateGameTimer() {
+      if (!gameActive) return;
+      const elapsed = (Date.now() - gameStartTime) / 1000;
+      document.getElementById('stTime').textContent = formatTime(elapsed);
+    }
+
+    function addHistoryItem(move) {
+      const list = document.getElementById('moveList');
+      if (moveHistory.length === 1) list.innerHTML = '';
+
+      const item = document.createElement('div');
+      item.className = 'move-item' + (move.isBacktrack ? ' undo' : '');
+      item.innerHTML = `
+        <span class="mi-num">#${move.moveNumber}</span>
+        <span class="mi-tile">Tile ${move.tileValue}</span>
+        <span class="mi-dir">${move.directionName}</span>
+        <span class="mi-time">${(move.thinkTime / 1000).toFixed(1)}s</span>
+      `;
+      list.insertBefore(item, list.firstChild);
+      while (list.children.length > 20) list.removeChild(list.lastChild);
+    }
+
+    function clearHistory() {
+      document.getElementById('moveList').innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:10px;">No moves yet</div>';
+    }
+
+    // ============================================================
+    // GAME OVER
+    // ============================================================
+    function endGame() {
+      gameActive = false;
+      if (gameTimer) clearInterval(gameTimer);
+
+      const elapsed = (Date.now() - gameStartTime) / 1000;
+      const eff = optimalPathLength > 0 ? Math.round((optimalPathLength / totalMoves) * 100) : 0;
+
+      document.getElementById('ovMoves').textContent = totalMoves;
+      document.getElementById('ovTime').textContent = formatTime(elapsed);
+      document.getElementById('ovEff').textContent = eff + '%';
+      document.getElementById('ovBack').textContent = backtrackCount;
+
+      let rating = '⭐ KEEP PRACTICING';
+      if (eff >= 90) rating = '🏆 GRANDMASTER';
+      else if (eff >= 75) rating = '⭐⭐ EXPERT';
+      else if (eff >= 60) rating = '⭐⭐ ADVANCED';
+      else if (eff >= 40) rating = '⭐ INTERMEDIATE';
+      document.getElementById('ovRating').textContent = rating;
+
+      document.getElementById('gameOverOverlay').classList.add('show');
+    }
+
+    function resetAll() {
+      phase = 1;
+      initialState = [...DEFAULT_GOAL];
+      goalState = [...DEFAULT_GOAL];
+      selectedIndex = -1;
+      gameActive = false;
+      if (gameTimer) clearInterval(gameTimer);
+      document.getElementById('gameOverOverlay').classList.remove('show');
+      updatePhaseUI();
+      renderSetupBoard(initialBoard, initialState, true);
+    }
+
+    // ============================================================
+    // PHASE UI
+    // ============================================================
+    function updatePhaseUI() {
+      // Dots
+      document.getElementById('dot1').className = 'phase-dot' + (phase === 1 ? ' active' : ' done');
+      document.getElementById('dot2').className = 'phase-dot' + (phase === 2 ? ' active' : phase > 2 ? ' done' : '');
+      document.getElementById('dot3').className = 'phase-dot' + (phase === 3 ? ' active' : '');
+
+      // Cards
+      document.getElementById('initialCard').classList.toggle('hidden', phase !== 1);
+      document.getElementById('goalCard').classList.toggle('hidden', phase !== 2);
+      document.getElementById('gameCard').classList.toggle('hidden', phase !== 3);
+      document.getElementById('statsCard').classList.toggle('hidden', phase !== 3);
+      document.getElementById('effCard').classList.toggle('hidden', phase !== 3);
+      document.getElementById('historyCard').classList.toggle('hidden', phase !== 3);
+      document.getElementById('progressSection').classList.toggle('hidden', phase !== 3);
+
+      // Header
+      const titles = {
+        1: ['Setup Puzzle', 'Tap two tiles to swap them'],
+        2: ['Set Goal State', 'Define where you want to end up'],
+        3: ['Solve the Puzzle', 'Tap tiles to reach the goal']
+      };
+      document.getElementById('pageTitle').textContent = titles[phase][0];
+      document.getElementById('pageSubtitle').textContent = titles[phase][1];
+      document.getElementById('footerText').textContent = `Step ${phase} of 3: ${titles[phase][0]}`;
+
+      // Validation
+      hideValidation();
+    }
+
+    // ============================================================
+    // BFS SOLVER
+    // ============================================================
+    function bfs(startState, goalState) {
+      const startKey = startState.join(',');
+      const goalKey = goalState.join(',');
+      if (startKey === goalKey) return { path: [startState], moves: 0 };
+
+      const queue = [{ state: startState, path: [startState] }];
+      const visited = new Set([startKey]);
+
+      while (queue.length > 0) {
+        const { state, path } = queue.shift();
+        const emptyIdx = state.indexOf(0);
+        for (const neighbor of getMovableIndices(emptyIdx)) {
+          const newState = [...state];
+          [newState[emptyIdx], newState[neighbor]] = [newState[neighbor], newState[emptyIdx]];
+          const newKey = newState.join(',');
+          if (visited.has(newKey)) continue;
+          visited.add(newKey);
+          const newPath = [...path, newState];
+          if (newKey === goalKey) return { path: newPath, moves: newPath.length - 1 };
+          queue.push({ state: newState, path: newPath });
+        }
+      }
+      return null;
+    }
+
+    function computeOptimalPath(state, goal) {
+      const result = bfs(state, goal);
+      return result ? result.moves : 0;
+    }
+
+    // ============================================================
+    // UTILITIES
+    // ============================================================
+    function getMovableIndices(emptyIdx) {
+      const row = Math.floor(emptyIdx / 3);
+      const col = emptyIdx % 3;
+      const n = [];
+      if (row > 0) n.push(emptyIdx - 3);
+      if (row < 2) n.push(emptyIdx + 3);
+      if (col > 0) n.push(emptyIdx - 1);
+      if (col < 2) n.push(emptyIdx + 1);
+      return n;
+    }
+
+    function getDirection(fromEmpty, toEmpty) {
+      const diff = toEmpty - fromEmpty;
+      return diff > 0 ? `+${diff}` : `${diff}`;
+    }
+    function oppositeDirection(dir) {
+      const map = { '-3': '+3', '+3': '-3', '-1': '+1', '+1': '-1' };
+      return map[dir] || dir;
+    }
+
+    function isValidState(state) {
+      const sorted = [...state].sort((a, b) => a - b);
+      return sorted.every((v, i) => v === i);
+    }
+
+    function isSolvablePair(start, goal) {
+      // For 8-puzzle, two states are reachable from each other iff they have same parity
+      return (countInversions(start) % 2) === (countInversions(goal) % 2);
+    }
+
+    function countInversions(state) {
+      const tiles = state.filter(x => x !== 0);
+      let inv = 0;
+      for (let i = 0; i < tiles.length; i++)
+        for (let j = i + 1; j < tiles.length; j++)
+          if (tiles[i] > tiles[j]) inv++;
+      return inv;
+    }
+
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function formatTime(seconds) {
+      if (seconds < 60) return seconds.toFixed(1) + 's';
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+      if (phase !== 3 || !gameActive) return;
+      const emptyIdx = currentState.indexOf(0);
+      const movable = getMovableIndices(emptyIdx);
+      let target = -1;
+      switch (e.key) {
+        case 'ArrowUp': target = movable.find(i => i === emptyIdx + 3); break;
+        case 'ArrowDown': target = movable.find(i => i === emptyIdx - 3); break;
+        case 'ArrowLeft': target = movable.find(i => i === emptyIdx + 1); break;
+        case 'ArrowRight': target = movable.find(i => i === emptyIdx - 1); break;
+      }
+      if (target !== undefined && target !== -1) { e.preventDefault(); handleGameMove(target); }
+    });
+
+    // ============================================================
+    // START
+    // ============================================================
+    renderSetupBoard(initialBoard, initialState, true);
+  </script>
+</body>
+</html>
